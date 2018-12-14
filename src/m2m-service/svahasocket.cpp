@@ -60,7 +60,7 @@ void SvahaSocket::setDoAfterConn(const int &command, const QVariantHash &s_data)
 //------------------------------------------------------------------------------------------
 void SvahaSocket::startConnection()
 {
-    qDebug() << "QThread create SvahaServiceConnector " << QTime::currentTime().toString("hh:mm:ss") << QThread::currentThreadId();
+//    qDebug() << "QThread create SvahaServiceConnector " << QTime::currentTime().toString("hh:mm:ss") << QThread::currentThreadId();
 
     connect(this, SIGNAL(readyRead()), SLOT(mReadyRead()) );
     connect(this, SIGNAL(disconnected()), SLOT(onDisconn()) );
