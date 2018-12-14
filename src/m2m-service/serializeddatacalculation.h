@@ -13,8 +13,6 @@ public:
 
     static qint64 chkMessSize(const QVariant &s_data);
 
-
-
 };
 
 #endif // SERIALIZEDDATACALCULATION_H
