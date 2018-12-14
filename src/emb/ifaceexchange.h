@@ -14,6 +14,7 @@ public:
 
     static QString byte2humanRead(const quint32 &byte);
 
+
 };
 
 #endif // IFACEEXCHANGE_H
