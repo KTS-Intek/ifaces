@@ -25,3 +25,5 @@ SOURCES += \
     $$PWD/src/m2m-service/svahasocket.cpp \
     $$PWD/src/m2m-service/serializeddatacalculation.cpp \
     $$PWD/src/m2m-service/matildamessages.cpp
+
+
