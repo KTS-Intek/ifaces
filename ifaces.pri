@@ -25,9 +25,16 @@ INCLUDEPATH  += $$PWD\
 #DEFINES += ADDANDROIDFTDIUART=1
 #}
 
+contains( QT, serialport) {
+HEADERS += \
+    $$PWD/src/emb/checkcurrport.h
+
+SOURCES += \
+    $$PWD/src/emb/checkcurrport.cpp
+}
+
 
 HEADERS += \
-    $$PWD/src/emb/checkcurrport.h \
     $$PWD/src/emb/conf2modem.h \
     $$PWD/src/emb/conf2modemhelper.h \
     $$PWD/src/emb/embeelimits.h \
@@ -37,7 +44,6 @@ HEADERS += \
     $$PWD/src/emb/peredavatorpriority.h
 
 SOURCES += \
-    $$PWD/src/emb/checkcurrport.cpp \
     $$PWD/src/emb/conf2modem.cpp \
     $$PWD/src/emb/conf2modemhelper.cpp \
     $$PWD/src/emb/ifaceexchange.cpp \
