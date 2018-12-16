@@ -6,7 +6,7 @@ linux-beagleboard-g++:{
 CONFIG += c++11
 
 android:{
-QT += androidextras
+#QT += androidextras
 #SOURCES += snif-android-src/qtandroidftdi.cpp
 #HEADERS += snif-android-src/qtandroidftdi.h
 #DEFINES += ADDANDROIDFTDIUART=1
