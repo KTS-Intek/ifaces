@@ -1,84 +1,56 @@
 #include "conf2modem.h"
 #include <QTime>
-#include <QThread>
 
-#include "matildalimits.h"
+//#include "matildalimits.h"
 //#include "src/matilda/matildalimits.h"
-#include "embeelimits.h"
 #include "conf2modemhelper.h"
+//#include "matildalimits.h"
+#include "embeelimits.h"
 
+#include "src/base/convertatype.h"
+#include "src/shared/embeedefaultreadcommandlist.h"
 
-Conf2modem::Conf2modem(const int &dbgExtSrcId, const bool &verboseMode, QObject *parent) : QObject(parent), dbgExtSrcId(dbgExtSrcId), verboseMode(verboseMode)
+//-------------------------------------------------------------------------------------
+
+Conf2modem::Conf2modem(const int &dbgExtSrcId, const bool &verboseMode, QObject *parent) : Conn2modem(dbgExtSrcId, verboseMode, parent)
 {
-    activeDbgMessages = (dbgExtSrcId > 0);
-    createDevices();
-    onDeviceDestr();
-
-    writePrtt = 0;
-    apiErrCounter = 0;
-    msecWhenCoordinatorWasGood = 0;
 
 
 }
-
-quint16 Conf2modem::getConnectionDownCounter() const
+//-------------------------------------------------------------------------------------
+bool Conf2modem::openAconnection(const ZbyrConnSett &connSett, QString &connline)
 {
-    return connectionDownCounter;
+    bool r = false;
+    switch(connSett.connectionType){
+    case 1  : r = openTcpConnection(connSett.prdvtrAddr, connSett.prdvtrPort); break;
+    case 2  : r = openM2mConnection(connSett.m2mhash); break;
+    default : r = openSerialPort(connSett.prdvtrAddr, connSett.prdvtrPort, connSett.uarts); break;
+    }
+
+    if(r){
+
+        switch(connSett.connectionType){
+        case 1  : connline = QString("%1\n%2").arg(connSett.prdvtrAddr).arg(connSett.prdvtrPort); break;
+        case 2  : connline = ConvertAtype::varHash2str(connSett.m2mhash); break;
+        default : connline = QString("%1\n%2").arg(connSett.prdvtrAddr).arg(connSett.prdvtrPort); break;
+        }
+    }
+    return r;
 }
 
 
-void Conf2modem::createDevices()
+//-------------------------------------------------------------------------------------
+
+bool Conf2modem::enterCommandMode(const QString &operationname)
 {
-    socket = new QTcpSocket(this);
-    connect(socket, SIGNAL(disconnected()), this, SIGNAL(onConnectionClosed()) );
-
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-
-        svahaConnector = new SvahaServiceConnector(this);
-        connect(svahaConnector, SIGNAL(disconnected()), this, SIGNAL(onConnectionClosed()) );
-
-        serialPort = new QSerialPort(this);
-        CheckCurrPort *checkPort = new CheckCurrPort(this);
-
-        connect(checkPort, SIGNAL(portDisconnected(bool)), this, SLOT(closeSerialPort()));
-        connect(checkPort,SIGNAL(terminateNow()), this, SLOT(closeSerialPort()));
-
-        connect(this, SIGNAL(onConnectionClosed()), checkPort, SLOT(terminate()) );
-        connect(this, SIGNAL(stopCheckCurrPort()), checkPort, SLOT(terminate()) );
-        connect(this, SIGNAL(onConnectionDown()), checkPort, SLOT(terminate()) );
-        connect(this, SIGNAL(onSerialPortOpened(QString)), checkPort, SLOT(zapuskalka(QString)) );
-
-#endif
+    emit currentOperation(tr("%1, entering the command mode").arg(operationname));
+    return enterCommandMode();
 }
 
-quint8 Conf2modem::getWritePrtt() const
-{
-    return writePrtt;
-}
-
-QString Conf2modem::getLastIfaceName() const
-{
-    return ifaceName;
-}
-
-bool Conf2modem::isDirectAccess() const
-{
-    return directAccess;
-}
-
-bool Conf2modem::isBlockByPrtt() const
-{
-    return uartBlockPrtt;
-}
-
-bool Conf2modem::isUartBusy() const
-{
-    return (directAccess || uartBlockPrtt);
-}
+//-------------------------------------------------------------------------------------
 
 bool Conf2modem::enterCommandMode()
 {
-
     QByteArray dataP("+++\r\n");/*tmpStr.toLocal8Bit();*/
 
     readAll();//clear a buffer
@@ -112,7 +84,7 @@ bool Conf2modem::enterCommandMode()
 
     }
 
-#ifdef IS_ZBYRATOR
+#ifdef HASGUI4USR
     modemIsOverRS485 = (readArr == "O\r\n");
 #endif
     for( int retry = 0, odyRaz = 0; retry < 7 && readArr.left(7).toUpper() != "OKERROR" && readArr.left(5).toUpper() != "ERROR" ; retry++) {//zminyty symvoly vhody v comandnyj rejym
@@ -147,7 +119,7 @@ bool Conf2modem::enterCommandMode()
             retry--;
         }
 
-#ifdef IS_ZBYRATOR
+#ifdef HASGUI4USR
         if(readArr == "O\r\n")
             modemIsOverRS485 = true;
 #endif
@@ -161,14 +133,212 @@ bool Conf2modem::enterCommandMode()
     return (readArr.left(7).toUpper() == "OKERROR" || readArr.left(5).toUpper() == "ERROR");
 }
 
+
+
+//-------------------------------------------------------------------------------------
+
 bool Conf2modem::networkReset(QString &errStr)
 {
 
-    for(int retr = 0; retr < 3; retr++){
+   return writeSomeCommand(QString("ATNR 5").split("\t"), true, false, false, tr("Network reset"), errStr);
+
+}
+
+//-------------------------------------------------------------------------------------
+
+bool Conf2modem::resetAmodem(QString &errStr)
+{
+    return writeSomeCommand(QStringList(), true, true, true, tr("Reset the modem"), errStr);
+}
+
+//-------------------------------------------------------------------------------------
+
+bool Conf2modem::factorySettings(QString &errStr)
+{
+    const QMap<QString,QString> map = getTheModemInfo("ATBD", false, false, tr("Factory settings"), errStr);
+    if(map.isEmpty())
+        return false;
+
+    bool ok;
+    const int baudindx = map.value("ATBD").toInt(&ok);
+    if(ok && baudindx >= 0 && baudindx < 8)
+        return writeSomeCommand(QString("ATRE;ATBD%1;ATWR").arg(baudindx).split(";"), false, true, true, tr("Factory settings"), errStr);
+
+    errStr = tr("Received a bad value(");
+    return false;
+
+}
+//-------------------------------------------------------------------------------------
+bool Conf2modem::readAboutModem(QVariantMap &atcommands, QString &errStr)
+{
+
+    const QStringList listat = EmbeeDefaultReadCommandList::getReadCommandList();
+//ATSM
+    QStringList list2write;
+    for(int i = 0, imax = listat.size(); i < imax; i++){
+        if(!atcommands.contains(listat.at(i)))
+            list2write.append(listat.at(i));
+    }
+
+    if(!atcommands.contains("AT_list"))
+        atcommands.insert("AT_list", listat);
+
+    list2write.removeOne("ATSM");
+
+    const QMap<QString,QString> map = getTheModemInfo(list2write, false, false, tr("Read the modem"), errStr);
+    if(map.isEmpty())
+        return false;
+
+
+    for(int i = 0, imax = list2write.size(); i < imax; i++)
+        atcommands.insert(list2write.at(i), map.value(list2write.at(i)).toUpper());
+
+    if(!atcommands.contains("ATSM") ){
+        if(atcommands.value("ATAD").toString().toUpper() == "C" && atcommands.value("ATVR").toString().mid(1).toInt() > 205){
+            const QMap<QString,QString> map = getTheModemInfo("ATSM", true, false, tr("Read the modem"), errStr);
+            if(map.isEmpty())
+                return false;
+            atcommands.insert(QString("ATSM"), map.value("ATSM").toUpper());
+        }else
+            atcommands.insert(QString("ATSM"), "!");
+    }
+    return true;
+
+}
+
+//-------------------------------------------------------------------------------------
+
+bool Conf2modem::nodeDiscovery(const int &modemsLimit, const bool &hardRecovery, int &modemReady, QVariantMap &ndtParams, QString &errStr)
+{
+
+    const QString opername = tr("Node discovery");
+    bool sendAtfr = true;
+    if(ndtParams.isEmpty()){//first time only
+        const QMap<QString,QString> map = getTheModemInfo("ATAD", false, false, opername, errStr);
+        if(map.isEmpty())
+            return false;
+
+        if(modemIsOverRS485){
+            errStr = tr("Node Discovery Tool doesn't support RS485");
+            return true;//the end
+        }
+
+        if(map.value("ATAD").toUpper() != "C"){
+            errStr = tr("The modem is not a coordinator");
+            return true;//the end
+        }
+
+        const QMap<QString,QString> mapparams = getTheModemInfo(QString("ATSM ATRN").split(" "), false, false, opername, errStr);
+        if(mapparams.isEmpty())
+            return false;
+
+        if(mapparams.value("intATSM") != "0"){
+            ndtParams.insert("intATSM", mapparams.value("intATSM"));
+
+            if(!writeSomeCommand(QString("ATSM0 ATWR").split(" "), false, true, true, opername, errStr))
+                return false;
+            readDevice();
+            sendAtfr = false;
+        }
+
+//        if(!mapparams.value("ATRN") != "1"){
+//            waitForReadyRead(2000);
+//            readDevice();
+//        }
+    }
+    if(sendAtfr){
+        writeSomeCommand("", false, true, true, opername, errStr);
+        readDevice();
+        sendAtfr = false;
+    }
+
+
+    const int timeout = 3 * 60 * 1000;// 155000;
+    QTime time;
+    time.start();
+
+    bool wasInCommandMode = false;
+    QString readstr;
+
+    const int modemMaximum = (modemsLimit < 1) ? 0xFFFF : modemsLimit;
+
+    QStringList listreadynis = ndtParams.value("listreadynis").toStringList();
+
+    for(int i = 0; !stopAll && isConnectionWorks() && i < 0xFFFFFFF && time.elapsed() < timeout && modemReady < modemMaximum; i++){
+
+        if(!wasInCommandMode){
+            if(!enterCommandMode(opername))
+                break;
+            wasInCommandMode = true;
+            readstr.clear();
+            writeATcommand("ATND");
+        }
+
+        readstr.append(readDevice());
+        if(readstr.contains("\r\n")){
+            bool need2reenterTheCommandMode;
+            modemReady += deocodeNtdOut(processNdtLine(readstr), hardRecovery, need2reenterTheCommandMode, listreadynis);
+            if(modemReady >= modemMaximum)
+                break;
+
+            if(need2reenterTheCommandMode)
+                wasInCommandMode = false;
+        }
+    }
+
+    ndtParams.insert("listreadynis", listreadynis);
+
+    if(stopAll){
+        writeATcommand("ATCN");
+        readDeviceQuick("\r\n", true);
+        return true;
+    }
+
+    if(modemReady >= modemMaximum){
+        QStringList writecommands;
+        if(ndtParams.value("intATSM") == "1"){
+            writecommands.append("ATSM1");
+            writecommands.append("ATWR");
+        }
+        return writeSomeCommand(writecommands, false, true, true, opername, errStr);
+    }
+
+    return false;
+}
+
+//-------------------------------------------------------------------------------------
+
+bool Conf2modem::writeCommands2aModem(const QStringList &lcommands, QString &errStr)
+{
+    bool exitthecommandmode = true;
+    if(!lcommands.isEmpty()){
+        const QStringList lexitcm = QString("ATLN ATNR ATFR ATCN ATAC ").split(" ", QString::SkipEmptyParts);
+        exitthecommandmode = !lexitcm.contains(lcommands.last().toUpper().left(4));
+    }
+
+    return writeSomeCommand(lcommands, exitthecommandmode, true, true, tr("Changing the configuration"), errStr);
+
+}
+
+//-------------------------------------------------------------------------------------
+
+bool Conf2modem::writeSomeCommand(const QString &atcommand, const bool &enterTheCommandMode, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr)
+{
+    return writeSomeCommand(atcommand.split("\n", QString::SkipEmptyParts), enterTheCommandMode, exitCommandMode, atfrAtTheEnd, operationName, errStr);
+}
+
+//-------------------------------------------------------------------------------------
+
+bool Conf2modem::writeSomeCommand(const QStringList &list2write, const bool &enterTheCommandMode, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr)
+{
+
+    for(int retr = 0, jmax = list2write.size(); retr < 3; retr++){
         if(retr > 0)
             readAll();
 
-        emit currentOperation(tr("Network reset"));
+        errStr.clear();
+
+        emit currentOperation(tr("Executing '%1'").arg(operationName));
 
         if(stopAll){
             if(verboseMode)
@@ -178,16 +348,37 @@ bool Conf2modem::networkReset(QString &errStr)
         }
 
 
-        if(!enterCommandMode()){
-
-            if(sayGoodByeIfUartIsNFree("networkReset ", 555))
+        if((enterTheCommandMode || retr > 0 ) &&  !enterCommandMode(operationName)){
+            if(sayGoodByeIfUartIsNFree(operationName, 555))
                 return false;
 
-            errStr = tr("Can't enter a command mode(");
+            errStr = tr("Can't enter the command mode(");
             continue;
         }
 
-        writeATcommand("ATNR 5");
+        bool hasErr = false;
+        QByteArray readarr;
+
+        for(int j = 0; j < jmax && !hasErr; j++){
+            writeATcommand(list2write.at(j));// "ATNR 5");
+            readarr = readDevice();
+            if(readarr.startsWith("OK\r\n") || readarr.endsWith("OK\r\n"))
+                continue;
+            hasErr = true;
+            errStr = tr("The command '%1' failed").arg(list2write.at(j));
+        }
+
+
+        if(hasErr){
+            continue;
+        }
+
+        if(!exitCommandMode){
+            emit currentOperation(tr("Done '%1'").arg(operationName));
+            return true;
+        }
+
+        writeATcommand(atfrAtTheEnd ? "ATFR" : "ATCN");
 
         QTime time;
         time.start();
@@ -197,18 +388,63 @@ bool Conf2modem::networkReset(QString &errStr)
             readArr2.append(readDevice());
 
 
-        if(readArr2.left(4) == "OK\r\n"){
-            emit currentOperation(tr("Network reset..."));
+        if(readArr2.startsWith("OK\r\n")){
+            emit currentOperation(tr("Done '%1'").arg(operationName));
+
             isCoordinatorConfigReady = false;
             return true;
         }
         errStr = tr("Unknown error (");
         writeATcommand("ATCN");
-        readDevice();
+        readDeviceQuick("\r\n", true);// Device();
+
+
 
     }
     return false;
 }
+
+//-------------------------------------------------------------------------------------
+
+QMap<QString, QString> Conf2modem::getTheModemInfo(const QString &atcommand, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr)
+{
+    return getTheModemInfo(atcommand.split("\n"), exitCommandMode, atfrAtTheEnd, operationName, errStr);
+}
+
+//-------------------------------------------------------------------------------------
+
+QMap<QString, QString> Conf2modem::getTheModemInfo(const QStringList &list2read, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr)
+{
+    QMap<QString,QString> map;
+    if(!writeSomeCommand(QStringList(), true, false, false, tr("%1, entering the command mode").arg(operationName), errStr))
+        return map;
+
+    emit currentOperation(tr("Reading '%1'").arg(operationName));
+
+    for(int i = 0, imax = list2read.size(); i < imax; i++){
+        writeATcommand(list2read.at(i));
+        const QByteArray readarr = readDevice();
+        if(!readarr.isEmpty() && readarr != "ERROR\r\n"){
+            const QString rez = QString(readarr).left(readarr.length() - 2);
+
+            bool ok;
+            const int v = rez.toInt(&ok);
+
+            map.insert(list2read.at(i), rez);
+            if(ok)
+                map.insert("int" + list2read.at(i), QString::number(v));
+            emit atCommandRez(list2read.at(i), rez);
+        }else
+            errStr = tr("Command '%1' failed").arg(list2read.at(i));
+    }
+
+    if(exitCommandMode && !writeSomeCommand(QStringList(), false, exitCommandMode, atfrAtTheEnd, tr("%1, exiting the command mode").arg(operationName), errStr))
+        return map;
+
+    return map;
+}
+
+//-------------------------------------------------------------------------------------
 
 bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBee)
 {
@@ -234,7 +470,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
 
 
         if(!enterCommandMode()){
-            emit currentOperation(tr("Can't enter a command mode."));
+            emit currentOperation(tr("Can't enter the command mode("));
 
 
             if(!isCoordinatorFreeWithRead())
@@ -266,7 +502,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
 
     }
 
-#ifdef IS_ZBYRATOR
+#ifdef HASGUI4USR
     if(modemIsOverRS485)
         return true;
 #endif
@@ -289,7 +525,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                 return false;
         }
         if(!enterCommandMode()){
-            emit currentOperation(tr("Can't enter a command mode."));
+            emit currentOperation(tr("Can't enter the command mode("));
 
             if(!isCoordinatorFreeWithRead())
                 continue;
@@ -482,8 +718,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
             if(readAboutZigBee && !aboutModem.isEmpty()){
                 aboutModem = conf2modemHelper::aboutZigBeeModem2humanReadable(aboutModem);
                 if(!aboutModem.isEmpty()){
-                    aboutModem.insert("Updated", QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
-                    emit onAboutZigBee(aboutModem);
+                    emit onAboutZigBee(addCurrentDate2aboutModem(aboutModem));
                 }
             }
             return true;
@@ -493,48 +728,16 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
     return false;
 }
 
-bool Conf2modem::isConnectionWorks()
-{
-    bool r = false;
 
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
+//-------------------------------------------------------------------------------------
 
-        switch(lastConnectionType){
-        case 0: r = serialPort->isOpen(); break;
-        case 1: r = isTcpConnectionWorks(socket); break;
-        case 2: r = svahaConnector->isOpen(); break;
-        }
-
-#else
-    r = isTcpConnectionWorks(socket);
-#endif
-    if(!r && connectionDownCounter < 0xFFF)
-        connectionDownCounter++;
-    return r;
-
-}
-
-bool Conf2modem::isConnectionWorks(int waitMsec)
-{
-    if(isConnectionWorks())
-        return true;
-    if(waitMsec > 0)
-        QThread::msleep(waitMsec);
-    return false;
-}
-
-
-bool Conf2modem::isTcpConnectionWorks(QTcpSocket *socket)
-{
-    return (socket->state() == QTcpSocket::ConnectedState || socket->state() == QTcpSocket::ConnectingState);
-}
 
 bool Conf2modem::isCoordinatorGood(const bool &forced, const bool &readAboutZigBee)
 {
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
-        isCoordinatorConfigReady = (isCoordinatorConfigReady || !forced);
+    isCoordinatorConfigReady = (isCoordinatorConfigReady || !forced);
 #endif
     if(!forced && isCoordinatorConfigReady && qAbs(msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) < MAX_MSEC_FOR_COORDINATOR_READY )
         return isCoordinatorConfigReady;
@@ -561,685 +764,179 @@ bool Conf2modem::isCoordinatorGood(const bool &forced, const bool &readAboutZigB
 
 }
 
+//-------------------------------------------------------------------------------------
 
-QByteArray Conf2modem::readDevice()
+
+QVariantHash Conf2modem::addCurrentDate2aboutModem(QVariantHash &aboutModem)
 {
-    return readDevice("\r\n", false);
+    aboutModem.insert("Updated", QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
+    return aboutModem;
 }
 
-QByteArray Conf2modem::readDevice(const QByteArray &endSymb, const bool &isQuickMode)
-{
-    QByteArray readArr;
-    if(!isConnectionWorks())
-        return "";
+//-------------------------------------------------------------------------------------
 
 
-    QTime globalTime;
-    globalTime.start();
-
-    const int globalTimeMax = timeouts.global;
-    const qint32 timeOut_c = timeouts.block;
-
-    readArr = readAll();
-
-    QTime time;
-    time.start();
-
-    const int endSymbLen = endSymb.length();
-
-    bool readArrHasData = false;
-    bool uartAccessChecked = false;
-
-    const int defmsec = isQuickMode ? 10 : 50;
-    const int defmsec2 = isQuickMode ? 50 : 1111;
-
-
-    for(int counter = 0, hasDataCounter = 0; (readArr.isEmpty() || time.elapsed() < timeOut_c) && globalTime.elapsed() < globalTimeMax && counter < MAX_READ_TRYES_FROM_UART; counter++){
-
-        if(!uartAccessChecked && canCheckUartAccess(readArr.isEmpty(), globalTime.elapsed())){
-            if((checkUartAccess(readArr, globalTime.elapsed()) || directAccess || uartBlockPrtt))
-                break;
-            uartAccessChecked = !readArr.isEmpty();
-        }
-
-        if(readArrHasData){
-            if(readArr.length() > MAX_READ_FROM_UART){
-                incrementApiErrCounter();
-                break;
-            }
-
-            if(readArr.length() > endSymbLen && readArr.right(endSymbLen) == endSymb)
-                break;
-
-        }
-        if(waitForReadyRead( (uartBlockPrtt) ? defmsec2 : defmsec)){
-            readArr.append(readAll());
-            hasDataCounter++;
-            time.restart();
-        }
-        if(!readArrHasData && hasDataCounter != 0)
-            readArrHasData = !readArr.isEmpty();
-
-//        if(isQuickMode)
-//            break;
-
-    }
-    emit dataReadWriteReal(readArr, ifaceName, true);
-    if(!uartAccessChecked && (directAccess || uartBlockPrtt || checkUartAccess(readArr, globalTime.elapsed()))){
-        if(sayGoodByeIfUartIsNFree("readDevice ", 555, readArr.isEmpty())){
-            if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem readDevice endSymb=%1 exit, busy, timeg=%2, timeb=%3").arg(QString(endSymb))
-                                                         .arg(globalTime.elapsed()).arg(time.elapsed()));
-            return QByteArray();
-        }
-    }
-
-    emit dataRead(readArr);
-
-    if(!readArr.isEmpty())
-        emit dataFromDevice();
-
-    if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem readDevice endSymb=%1 exit, readArrIsEmpty=%2, readArr=%3, timeg=%4, timeb=%5")
-                                                 .arg(QString(endSymb)).arg(readArr.isEmpty()).arg(QString(readArr.toHex()) + " " + QString(readArr).simplified().trimmed())
-                                                 .arg(globalTime.elapsed()).arg(time.elapsed()));
-
-
-
-
-    return readArr;
-}
-
-QByteArray Conf2modem::readDeviceQuick(const QByteArray &endSymb, const bool &isclearbufmode)
-{
-    const DeviceTimeouts timeoutsl = this->timeouts;
-    timeouts.global = isclearbufmode ? 60 : 250;
-    timeouts.block = isclearbufmode ? 20 : 50;
-    const QByteArray r = readDevice(endSymb, true);
-    this->timeouts = timeoutsl;
-
-    return r;
-
-}
-
-bool Conf2modem::waitForReadyRead(const int &msecs)
-{
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-
-        switch(lastConnectionType){
-        case 0: return serialPort->waitForReadyRead(msecs);
-        case 1: return socket->waitForReadyRead(msecs);
-        case 2: return svahaConnector->waitForReadyRead(msecs);
-        }
-        return false ;
-
-
-#else
-    return socket->waitForReadyRead(msecs);
-#endif
-}
-
-
-
-bool Conf2modem::waitForBytesWritten(const int &msecs)
-{
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-        switch(lastConnectionType){
-        case 0: return serialPort->waitForBytesWritten(msecs);
-        case 1: return socket->waitForBytesWritten(msecs);
-        case 2: return svahaConnector->waitForBytesWritten(msecs);
-        }
-        return false ;
-
-
-#else
-    return socket->waitForBytesWritten(msecs);
-#endif
-
-}
-
-QByteArray Conf2modem::readAll()//clear a read buffer
+QStringList Conf2modem::processNdtLine(QString &line)
 {
 
-    if(!isConnectionWorks())
-        return "";
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
-    emit onReadWriteOperation(true);
+    const QStringList listSeperatist = line.split("\r\n", QString::SkipEmptyParts);
 
-        switch(lastConnectionType){
-        case 0: return serialPort->readAll();
-        case 1: return socket->readAll();
-        case 2: return svahaConnector->readAll();
-        }
-        return "";
-
-
-#else
-    return socket->readAll();
-#endif
-}
-
-
-qint64 Conf2modem::writeATcommand(const QString &atcommand)
-{
-    return write2dev(QByteArray(atcommand.toUtf8()) + "\r\n");
-}
-
-qint64 Conf2modem::writeATcommand(const QString &atcommand, const bool &ignoreDaAndPrtt)
-{    
-    return write2dev(QByteArray(atcommand.toUtf8()) + "\r\n", ignoreDaAndPrtt);
-}
-
-qint64 Conf2modem::write2dev(const QByteArray &writeArr)
-{
-    return write2dev(writeArr, false);
-}
-
-qint64 Conf2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAndPrtt)
-{
-
-    if(verboseMode)
-        qDebug() << "ZbyratorObject::write2dev " << directAccess << writeArr.isEmpty() << writePreffix << uartBlockPrtt;
-
-    if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem write2dev directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, writeArr=%4, lastConnectionType=%5").arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(QString(writeArr.toHex()) + " " + QString(writeArr).simplified().trimmed()).arg((int)lastConnectionType));
-
-    if(!isConnectionWorks())
-        return 0;
-
-    emit dataReadWriteReal(writeArr, ifaceName, false);
-    if(!ignoreDaAndPrtt && directAccess)
-        return 0;
-
-    if(writeArr.isEmpty() || lastConnectionType == 0xFF)
-        return 0;
-
-
-    //<prtt>;<space>;<data>
-    //prtt.len = 1byte
-#ifdef DISABLE_UART_PRIORITY
-    const qint64 len = write(writeArr);
-#else
-    const qint64 len = write(writePreffix + writeArr);// QByteArray::number(lastPeredavatorPrtt) + "; ;"
-#endif
-    if(uartBlockPrtt)
-        lastCommandWasAtcn = (len > 0 && writeArr == "ATCN\r\n");
-    if(verboseMode)
-        qDebug() << "ZbyratorObject::write2dev " << len << writePreffix << lastCommandWasAtcn;
-
-    if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem write2dev directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, len=%4").arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(len));
-
-    waitForBytesWritten(300);
-    emit dataWrite(writeArr);
-
-    return len;
-}
-
-bool Conf2modem::openTcpConnection(const QStringList &hosts, const QList<quint16> &ports)
-{
-
-    for(int i = 0, imax = hosts.size(); i < imax; i++){
-        if(openTcpConnection(hosts.at(i), ports.at(i)))
-            return true;
-    }
-    return false;
-}
-
-bool Conf2modem::openTcpConnection(const QString &host, const quint16 &port)
-{
-    onDeviceDestr();//reset params
-    lastConnectionType = 1;
-    if(verboseMode)
-        qDebug() << "Conf2modem::openTcpConnection()";
-    if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection host=%1, port=%2, myPrtt=%3").arg(host).arg(port).arg(QString(writePreffix)));
-
-
-    emit openingTcpConnection();
-
-    stopAll = false;
-    socket->connectToHost(host, port);
-
-    const bool r = socket->waitForConnected(qMax(timeouts.global, 5000));
-
-    if(!r){
-        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection err=%1").arg(socket->errorString()));
-        emit currentOperation(tr("Can't connect to the coordinator. %1").arg(socket->errorString()));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
-        closeDevice();
-    }else{
-        connectionDownCounter = 0;
-        ifaceName = host.contains(":") ? QString("[%1]:%2").arg(host).arg(port) : QString("%1:%2").arg(host).arg(port);
-        emit currentOperation(tr("Connection to the coordinator was established)"));
-    }
-
-//#ifdef DISABLE_UART_PRIORITY
-//   if(r){
-//        writeATcommand("ATCN");
-//        readDeviceQuick("\r\n");
-
-//    }
-//#endif
-
-    return r;
-
-}
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-
-bool Conf2modem::openM2mConnection(const QVariantHash &oneProfile)
-{
-    onDeviceDestr();//reset params
-
-    lastConnectionType = 2;
-    stopAll = false;
-
-    const int timeout = qMax(timeouts.global, 7000);
-    svahaConnector->connect2hostViaSvaha(oneProfile, timeout, timeouts.block);
-    const bool r = svahaConnector->waitForConnected(timeout);
-
-    if(!r){
-        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection err=%1").arg(svahaConnector->errorString()));
-        emit currentOperation(tr("Can't connect to the coordinator. %1").arg(svahaConnector->errorString()));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
-        closeDevice();
-    }else{
-        ifaceName = svahaConnector->getLastConnDev();
-        connectionDownCounter = 0;
-        emit currentOperation(tr("Connection to the coordinator was established)"));
-    }
-
-//    if(r){
-//         writeATcommand("ATCN");
-//         readDeviceQuick("\r\n");
-//     }
-    return r;
-}
-
-bool Conf2modem::openSerialPort(const QString &portName, const qint32 &baudRate, const QStringList &uarts)
-{
-    onDeviceDestr();//reset params
- stopAll = false;
-    lastConnectionType = 0;
-    QString mess;
-    const bool r = (uarts.isEmpty() && !portName.isEmpty()) ?
-        findModemOnPort("", baudRate, portName.split("\n"), mess) : //manual mode
-        findModemOnPort(portName, baudRate, uarts, mess); //detection mode
-
-
-    if(!r){
-        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection err=%1").arg(mess));
-        emit currentOperation(tr("Can't connect to the coordinator. %1").arg(mess));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
-        closeDevice();
-    }else{
-        connectionDownCounter = 0;
-        ifaceName = serialPort->portName();
-        emit currentOperation(tr("Connection to the coordinator was established)"));
-
-    }
-
-    return r;
-
-
-}
-
-bool Conf2modem::findModemOnPort(QString defPortName, qint32 baudR, QStringList uarts, QString &lastError)
-{
-    std::sort(uarts.begin(), uarts.end());
-    if(!defPortName.isEmpty() && uarts.contains(defPortName)){
-        uarts.removeOne(defPortName);
-        uarts.prepend(defPortName);
-    }
-
-    while(!uarts.isEmpty()){
-        const QString portN = uarts.takeFirst();
-
-        emit currentOperation(tr("Trying to open %1").arg(portN));
-
-        serialPort->setPortName(portN);
-        if(serialPort->open(QIODevice::ReadWrite)){
-            if(serialPort->setBaudRate(baudR) && serialPort->setParity(QSerialPort::NoParity) && serialPort->setStopBits(QSerialPort::OneStop) &&
-                    serialPort->setDataBits(QSerialPort::Data8) && serialPort->setFlowControl(QSerialPort::NoFlowControl)){
-                serialPort->clear();
-                emit onSerialPortOpened(portN);
-
-                if(request2modemOn())
-                    return true;
-
-                emit stopCheckCurrPort();
-
-            }
-        }
-        serialPort->close();
-    }
-    lastError = tr("Can't find any device");
-    return false;
-}
-
-bool Conf2modem::request2modemOn()
-{
-
-    for(int i = 1; i <= 3 && !stopAll; i++){
-        emit currentOperation(tr("Detecting the modem... Sending the AT command to %1.").arg(serialPort->portName()));
-        writeATcommand("+++");
-        const QByteArray readArr = readDeviceQuick("\r\n", false);
-
-        if(readArr.startsWith("OKERROR") || readArr.startsWith("ERROR"))
-            return true;
-
-        if(!readArr.isEmpty() && (readArr.contains("OK") || readArr.contains("O\r\n") || readArr.contains("K\r\n")))
-            i--;
-
-    }
-    return false;
-}
-
-
-#endif
-
-
-void Conf2modem::lSleep(const int &msleep)
-{
-    QTime time;
-    time.start();
-    if(isConnectionWorks()){
-        for(int i = msleep > 10 ? 10 : msleep; i < msleep && isConnectionWorks() && time.elapsed() < msleep; i += 10)
-            readDevice();
-    }else{
-        for(int i = msleep > 10 ? 10 : msleep; i < msleep && time.elapsed() < msleep; i += 10)
-            QThread::msleep(10);
-    }
-}
-
-bool Conf2modem::checkUartAccess(const QByteArray &arr, const int &msecElapsed)
-{    
-    if(verboseMode)
-        qDebug() << "checkUartAccess " << arr.isEmpty() << msecElapsed << uartBlockPrtt << lastCommandWasAtcn << directAccess << arr.toHex();
-    if(uartBlockPrtt && lastCommandWasAtcn && arr.isEmpty() && msecElapsed > 200){
-        directAccess = uartBlockPrtt = false;
-        return false;
-    }
-
-    if(!arr.isEmpty()){
-
-        if(arr == PORT_IS_BUSY ){
-            if(!directAccess && msecElapsed <= MAX_MSEC_TIME2OPEN_DA){
-                directAccess = true;
-                uartBlockPrtt = false;
-                //            emit onDaStateChanged(true);
-                isCoordinatorConfigReady = false;
-            }
-
-        }else{
-            if(arr == PORT_IS_FREE || arr.endsWith(PORT_IS_FREE)){
-                if(directAccess){
-                    directAccess = uartBlockPrtt = false;
-                    //                emit onDaStateChanged(false);
-
-                }
-            }else{
-                if(!writePreffix.isEmpty() && arr == PORT_IS_BUSY_LOCAL){
-                    uartBlockPrtt = true;
-//                    emit onLowPriority2uart();
-
-                }else{
-                    if(msecElapsed > 0)
-                        directAccess = uartBlockPrtt = false;
-                }
-            }
-        }
-
-    }
-    if(verboseMode)
-        qDebug() << "arr=" << arr << directAccess << uartBlockPrtt;
-    return isUartBusy();
-}
-
-bool Conf2modem::canCheckUartAccess(const bool &arrIsEmpty, const int &msecElapsed)
-{
-    return (!arrIsEmpty || (arrIsEmpty && msecElapsed > 20 && lastCommandWasAtcn));
-}
-
-bool Conf2modem::isCoordinatorFree()
-{
-    const bool da = directAccess;
-    const bool busy = uartBlockPrtt;
-
-    QTime time; time.start();
-
-    if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem isCoordinatorFree da directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, time=%4")
-                          .arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(time.elapsed()));
-
-    const bool nfree = directAccess || uartBlockPrtt;
-    if(directAccess){
-        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem ondirectaccess directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, da=%4")
-                              .arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(da));
-        for(int i = 0; i < 3; i++){
-            readDevice();
-            if(!directAccess && !uartBlockPrtt)
-                return true;
-            if(uartBlockPrtt)
-                break;
-        }
-
-    }
-//    directAccess = uartBlockPrtt = false;//reset
-
-    writeATcommand("ATCN", true);//у відповідь може бути нічого, тому важливо почати обмін з мінімальною затримкою
-    if(readDeviceQuick("\r\n", false).contains("ERR") || uartBlockPrtt){
-        writeATcommand("ATCN", true);
-        readDeviceQuick("\r\n", false);//в цій функції уже є перевірка прямого доступу
-
-    }
-
-    if(da != directAccess){
-        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem isCoordinatorFree da directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, da=%4")
-                              .arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(da));
-//        emit onDaStateChanged(directAccess);
-    }
-
-    if(busy != uartBlockPrtt){
-
-        emit onBusyByPriority(uartBlockPrtt);
-    }
-
-    const bool nfree2 = (directAccess || uartBlockPrtt);
-    if(nfree == nfree2){
-        readDeviceQuick("\r\n", true);
-
-    }
-
-    const bool nfree3 = (directAccess || uartBlockPrtt);
-    if(nfree3 != nfree){
-        emit onCoordinatorIsBusy(nfree3);
-
-    }
-
-
-    return !nfree3;
-}
-
-bool Conf2modem::isCoordinatorFreeWithRead()
-{
-    QTime time; time.start();
-    if(isCoordinatorFree()){
-
-        return true;
-    }
-
-    if(isDirectAccess())
-        readDevice();
+    if(!line.endsWith("\r\n") && !listSeperatist.isEmpty())
+        line = listSeperatist.last();
     else
-        readDeviceQuick("\r\n", false);
-
-    const bool r = !isUartBusy();
+        line.clear();
 
 
-    return r;
+    return listSeperatist;
 }
 
-bool Conf2modem::sayGoodByeIfUartIsNFree(const QString &mess, const int &msec4blockUart)
+//-------------------------------------------------------------------------------------
+
+int Conf2modem::deocodeNtdOut(const QStringList &list, const bool &allowHard, bool &need2reenterTheCommandMode, QStringList &listreadynis)
 {
-    return sayGoodByeIfUartIsNFree(mess, msec4blockUart, false);
+    need2reenterTheCommandMode = false;
+    QMap<QString,QString> brokenStts;
+    //Default - OK, Recovered, Corrupted
+
+    int foundModems = 0;
+    for(int i = 0, imax = list.size(); i < imax; i++){
+        QString line = list.at(i);
+        if(line.startsWith("OK") || line.startsWith("ERR")){
+            need2reenterTheCommandMode = true;
+            break;
+        }
+
+        if(line.contains(":") && line.contains(",") && (line.contains("r:", Qt::CaseInsensitive) ||
+                                                        line.contains("c:", Qt::CaseInsensitive) ||
+                                                        line.contains("e:", Qt::CaseInsensitive) ||
+                                                        line.contains("m:", Qt::CaseInsensitive))){
+
+            const qint64 msec = QDateTime::currentMSecsSinceEpoch();
+
+            for(int j = 0; !line.isEmpty() && j < 0xFFFF; j++){
+                if(line.mid(1,1) == ":")
+                    break;
+                line = line.mid(1);
+            }
+
+
+            if(line.length() > 37){
+                if(allowHard)
+                    foundModems += decodeNtdOneLineHard(line, msec, brokenStts, listreadynis);
+                continue;
+            }
+
+            if(line.mid(1,1) == ":" && line.mid(18,1) == "," && decodeNtdOneLine(line, msec, false, listreadynis))
+                foundModems++;
+        }
+    }
+    return foundModems;
 }
 
-bool Conf2modem::sayGoodByeIfUartIsNFree(const QString &mess, const int &msec4blockUart, const bool &arrIsEmpty)
-{
-    if(directAccess || uartBlockPrtt){
-        if(verboseMode)
-            qDebug() << mess << directAccess << uartBlockPrtt;
+//-------------------------------------------------------------------------------------
 
-        if(!directAccess && uartBlockPrtt && arrIsEmpty && lastCommandWasAtcn)
-            uartBlockPrtt = false;
+
+int Conf2modem::decodeNtdOneLineHard(const QString &line, const qint64 &msec, QMap<QString, QString> &brokenStts, QStringList &listreadynis)
+{
+    const int li4ylnyk = line.count(":00", Qt::CaseInsensitive);
+    const int li4ylnykKoma = line.count(",", Qt::CaseInsensitive);
+
+    int foundModems = 0;
+    if(li4ylnyk > 1 && li4ylnykKoma > 1){
+        QString line2 = line;
+        QStringList listSeperatist2;
+        const QStringList listType = QString("R:00,E:00,M:00,C:00").split(',');
+        const int listTypeSize = listType.size();
+
+        for(int i = 0; i < listTypeSize; i++){
+            int lastIndx = line2.lastIndexOf(listType.at(i), -1, Qt::CaseInsensitive);
+            if(lastIndx > 0){
+                /*
+                     * 16:21:47.081 ttyUSB1 -> 72 3A 30 30 30 44 36 46 30 30 36 46 30 30 30 30      r:000D6F006F0000
+                     *              ttyUSB1 -> 37 41 36 44 42 39 2C 38 72 3A 30 30 30 44 36 46      7A6DB9,8r:000D6F
+                     *              ttyUSB1 -> 30 30 30 30 37 41 38 37 35 44 2C 36 32 31 0D 0A      00007A875D,621
+                     */
+                //                                    qDebug() << 4354 << line2.mid(lastIndx) << line2.mid(lastIndx).toLocal8Bit().toHex();
+                listSeperatist2.append(line2.mid(lastIndx));
+                line2 = line2.left(lastIndx);
+                i--;
+            }
+
+        }
+        listSeperatist2.append(line2);
+
+        //                                QStringList listSeperatist3;
+        for(int i = 0, imax = listSeperatist2.size(); i < imax; i++){// (!listSeperatist2.isEmpty()){
+            QString line2 = listSeperatist2.at(i);
+            while(!line2.isEmpty()){
+                if(line2.mid(1,1) == ":")
+                    break;
+                line2 = line2.mid(1);
+            }
+
+            int indxKoma = line2.indexOf(",");
+
+            if(indxKoma > 17){
+                const QString typeDev2 = line2.left(2);
+                QString sn = line2.mid(2,indxKoma - 2).right(16);
+                QString ni = line2.mid(indxKoma + 1).left(32);
+
+                if(sn.size() != 16)
+                    continue;
+
+                if(sn.left(2) != "00")
+                    sn = "00" + sn.mid(2);
+
+                indxKoma = ni.indexOf(",");
+
+                if(indxKoma > 0)
+                    ni = ni.left(indxKoma);
+
+                 if(decodeNtdOneLine(QString("%1%2,%3").arg(typeDev2).arg(sn).arg(ni), msec, true, listreadynis))
+                     foundModems++;
+
+                if(sn.startsWith("000D6F"))
+                    brokenStts.insert(line, QString("Recovered"));//Corrupted
+                else
+                    brokenStts.insert(line, QString("Corrupted"));//
+
+            }
+        }
+
+    }
+    return foundModems;
+}
+
+
+//-------------------------------------------------------------------------------------
+
+
+
+bool Conf2modem::decodeNtdOneLine(const QString &line, const qint64 &msec, const bool &wasRestored, QStringList &listreadynis)
+{
+    const QString typeDev = line.left(1).toUpper();
+
+    if(!line.startsWith("R", Qt::CaseInsensitive) &&
+            !line.startsWith("C", Qt::CaseInsensitive) &&
+            !line.startsWith("E", Qt::CaseInsensitive) &&
+            !line.startsWith("M", Qt::CaseInsensitive))
         return false;
 
-        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, mess +  QString("directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, sayGoodByeIfUartIsNFree, msec4blockUart=%4").arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(msec4blockUart));
-        if(msec4blockUart > 0)
-            QThread::msleep(msec4blockUart);
-        return true;
-    }
-    return false;
+
+
+    const QString sn = line.mid(2,16);
+    const QString ni = line.mid(19);
+
+    if(listreadynis.contains(ni))
+        return false;
+    listreadynis.append(ni);
+    emit ndtFounNewDev(msec, typeDev, sn, ni, wasRestored);// brokenStts.contains(line));
+
+    return true;
 }
 
 
-
-void Conf2modem::setWritePreffix(QByteArray preffix)
-{
-
-    if(writePreffix != preffix)
-        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem setWritePreffix directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, preffix=%4")
-                              .arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(QString(preffix)));
-
-#ifdef DISABLE_UART_PRIORITY
-    writePreffix.clear();
-#else
-
-    writePreffix = preffix;
-#endif
-
-}
-
-void Conf2modem::setWritePriority(const quint8 &prtt)
-{
-    writePrtt = prtt;
-    setWritePreffix(QByteArray::number(prtt) + "; ;");
-}
-
-void Conf2modem::stopAllSlot()
-{
-    stopAll = true;
-}
-
-void Conf2modem::resetStopAllConfModem()
-{
-    stopAll = false;
-}
-
-void Conf2modem::setTimeouts(int global, int block)
-{
-    timeouts.global = global;
-    timeouts.block = block;
-}
-
-void Conf2modem::incrementApiErrCounter()
-{
-    apiErrCounter++;
-
-    if(lastConnectionType != 0xFF && apiErrCounter > MAX_TRIES_FOR_CONFIG){
-        uartBlockPrtt = directAccess = false;
-        close();
-    }
-
-    emit currentOperation(tr("Can't activate the API mode, counter: %1").arg(apiErrCounter));
-
-    if(apiErrCounter > MAX_TRIES_FOR_HARD_RESET){
-        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem incrementApiErrCounter directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, apiErrCounter=%4")
-                              .arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(apiErrCounter));
-
-        apiErrCounter = 0;//обнуляю щоб не дуже часто скидало координатора
-        emit resetCoordinatorRequest();
-    }else if(apiErrCounter > MAX_TRIES_FOR_CONFIG){
-        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem incrementApiErrCounter directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, apiErrCounter=%4")
-                              .arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(apiErrCounter));
-        emit killPeredavatorRequest();
-    }
-}
-
-void Conf2modem::closeDevice()
-{    
-    if(isConnectionWorks()){
-        close();
-        uartBlockPrtt = directAccess = false;
-        emit currentOperation(tr("Connection to the coordinator has been closed"));
-
-        emit onConnectionDown();
-    }
-}
-
-void Conf2modem::resetBlockByPrtt()
-{
-    uartBlockPrtt = false;
-}
-
-void Conf2modem::resetDaState()
-{
-    directAccess = false;
-}
-
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-
-void Conf2modem::closeSerialPort()
-{
-    serialPort->close();
-    emit onConnectionClosed();
-}
+//-------------------------------------------------------------------------------------
 
 
-#endif
-
-void Conf2modem::onDeviceDestr()
-{
-    close();
-    if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem onDeviceDestr directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, apiErrCounter=%4")
-                          .arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(apiErrCounter));
-    modemIsOverRS485 = isCoordinatorConfigReady = false;
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-    lastConnectionType = 0xFF;
-#else
-    lastConnectionType = 1;//tcp client
-#endif
-    directAccess = false;
-    uartBlockPrtt = false;
-    lastCommandWasAtcn = false;
-    stopAllSlot();
-}
-
-qint64 Conf2modem::write(const QByteArray &arr)
-{
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-    emit onReadWriteOperation(false);
-
-        switch(lastConnectionType){
-        case 0: return serialPort->write(arr);
-        case 1: return socket->write(arr);
-        case 2: return svahaConnector->write(arr);
-        }
-        return -1;
-
-
-#else
-    return socket->write(arr);
-#endif
-
-}
-
-void Conf2modem::close()
-{
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-
-        switch(lastConnectionType){
-        case 0: return serialPort->close();
-        case 1: return socket->close();
-        case 2: return svahaConnector->close();
-        }
-        return;
-
-#else
-    return socket->close();
-#endif
-
-}

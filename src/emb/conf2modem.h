@@ -1,231 +1,99 @@
 #ifndef CONF2MODEM_H
 #define CONF2MODEM_H
 
-#include <QObject>
-#include <QIODevice>
-#include <QStringList>
-#include <QTcpSocket>
+#include "conn2modem.h"
+#include "src/emb/ifaceexchangeserializedtypes.h"
 
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-#include "src/m2m-service/svahaserviceconnector.h"
-#include "checkcurrport.h"
-#include <QSerialPort>
-#endif
-
-#define PORT_IS_BUSY        "\r\nUartIsBusy\r\n"
-#define PORT_IS_FREE        "\r\nUartIsFree\r\n"
-#define PORT_IS_BUSY_LOCAL  "\r\nUartIsBusyPrtt\r\n"
-#define PORT_IS_NFREE       "\r\nUartIs"
-
-
-struct DeviceTimeouts
-{
-    int block;
-    int global;
-    DeviceTimeouts() : block(77), global(7777) {}
-};
 
 //class Conf2modem : public QObject
 //{
 
 //#include "conf2modem_global.h"
 
-class Conf2modem : public QObject
+struct OneEmbeeModemSmpl
+{
+    QString typestr;
+    QString eui64;
+    QString ni;
+    bool wasRestored;
+    qint64 lastmsec;
+    OneEmbeeModemSmpl() {}
+};
+
+class Conf2modem : public Conn2modem
 {
     Q_OBJECT
 public:
     explicit Conf2modem(const int &dbgExtSrcId, const bool &verboseMode, QObject *parent = Q_NULLPTR);
 
-    QTcpSocket *socket;
+    bool openAconnection(const ZbyrConnSett &connSett, QString &connline);
 
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-    SvahaServiceConnector *svahaConnector;
-    QSerialPort *serialPort;
-#endif
 
-    quint16 getConnectionDownCounter() const ;
-
-    void createDevices();
-
-    quint8 getWritePrtt() const;
-
-    QString getLastIfaceName() const;
-
-    bool isDirectAccess() const;
-
-    bool isBlockByPrtt() const;
-
-    bool isUartBusy() const;
+    bool enterCommandMode(const QString &operationname);
 
     bool enterCommandMode();
 
     bool networkReset(QString &errStr);
 
+    bool resetAmodem(QString &errStr);
+
+    bool factorySettings(QString &errStr);
+
+    bool readAboutModem(QVariantMap &atcommands, QString &errStr);
+
+    bool nodeDiscovery(const int &modemsLimit, const bool &hardRecovery, int &modemReady, QVariantMap &ndtParams, QString &errStr);
+
+
+    bool writeCommands2aModem(const QStringList &lcommands, QString &errStr);
+
+
+    bool writeSomeCommand(const QString &atcommand, const bool &enterTheCommandMode, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr);
+
+    bool writeSomeCommand(const QStringList &list2write, const bool &enterTheCommandMode, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr);
+
+
+    QMap<QString,QString> getTheModemInfo(const QString &atcommand, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr);
+
+    QMap<QString,QString> getTheModemInfo(const QStringList &list2read, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr);
+
     bool enableDisableApi(const bool &enable, const bool &readAboutZigBee);
 
-    bool isConnectionWorks();
-
-    bool isConnectionWorks(int waitMsec);
-
-    bool isTcpConnectionWorks(QTcpSocket *socket);
 
     bool isCoordinatorGood(const bool &forced, const bool &readAboutZigBee);
 
 
-    QByteArray readDevice();
+    QVariantHash addCurrentDate2aboutModem(QVariantHash &aboutModem);
 
-    QByteArray readDevice(const QByteArray &endSymb, const bool &isQuickMode);
+    QStringList processNdtLine(QString &line);
 
-    QByteArray readDeviceQuick(const QByteArray &endSymb, const bool &isclearbufmode);
-
-    bool waitForReadyRead(const int &msecs);
-    bool waitForBytesWritten(const int &msecs);
-
-    QByteArray readAll();
+    int deocodeNtdOut(const QStringList &list, const bool &allowHard, bool &need2reenterTheCommandMode, QStringList &listreadynis);
 
 
-    qint64 writeATcommand(const QString &atcommand);
+    int decodeNtdOneLineHard(const QString &line, const qint64 &msec, QMap<QString, QString> &brokenStts, QStringList &listreadynis);
 
-    qint64 writeATcommand(const QString &atcommand, const bool &ignoreDaAndPrtt);
-
-
-    qint64 write2dev(const QByteArray &writeArr);
-
-    qint64 write2dev(const QByteArray &writeArr, const bool &ignoreDaAndPrtt);
-
-
-    bool openTcpConnection(const QStringList &hosts, const QList<quint16> &ports);
-
-    bool openTcpConnection(const QString &host, const quint16 &port);
-
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-    bool openM2mConnection(const QVariantHash &oneProfile);
-
-    bool openSerialPort(const QString &portName, const qint32 &baudRate, const QStringList &uarts);
-
-    bool findModemOnPort(QString defPortName, qint32 baudR, QStringList uarts, QString &lastError);
-
-    bool request2modemOn();
-
-
-#endif
-
-    void lSleep(const int &msleep);
-
-    bool checkUartAccess(const QByteArray &arr, const int &msecElapsed);
-
-    bool canCheckUartAccess(const bool &arrIsEmpty, const int &msecElapsed);
-
-    bool isCoordinatorFree();
-
-    bool isCoordinatorFreeWithRead();
-
-    bool sayGoodByeIfUartIsNFree(const QString &mess, const int &msec4blockUart);
-
-    bool sayGoodByeIfUartIsNFree(const QString &mess, const int &msec4blockUart, const bool &arrIsEmpty);
-
+    bool decodeNtdOneLine(const QString &line, const qint64 &msec, const bool &wasRestored, QStringList &listreadynis);
 
 signals:
-    void currentOperation(QString mess);
-
-    void dataFromDevice();
-
-    void openingTcpConnection();
 
 //    void onDaStateChanged(bool isdamodenow);
 
 //    void onLowPriority2uart();
-
-
-    void dataReadReal(QByteArray readArr);
-
-
-    void dataRead(QByteArray readArr);
-
-    void dataWrite(QByteArray writeArr);
-
-    void dataReadWriteReal(QByteArray arr, QString ifaceName, bool isRead);
-
     void onAboutZigBee(QVariantHash hash);
 
-
-    void onCoordinatorIsBusy(bool busy);
-
-
-    void onBusyByPriority(bool isBusy);
-
     void onApiModeEnabled();
-    void killPeredavatorRequest();
-    void resetCoordinatorRequest();//hardware
-
-    void appendDbgExtData(quint32 sourceType, QString data);
 
 
-    void onConnectionClosed();
+    void atCommandRez(QString atcommand, QString rez);
 
-    void onConnectionDown();
-
-    void onSerialPortOpened(QString portName);
-    void stopCheckCurrPort();
-    void onReadWriteOperation(bool isRead);
+    void ndtFounNewDev(qint64 msec, QString devtype, QString sn, QString ni, bool wasRestored);
 
 public slots:
-    void setWritePreffix(QByteArray preffix);
-
-    void setWritePriority(const quint8 &prtt);
-
-    void stopAllSlot();
-    void resetStopAllConfModem();
-
-    void setTimeouts(int global, int block);
-
-    void incrementApiErrCounter();
-
-    void closeDevice();
-
-    void resetBlockByPrtt();
-
-    void resetDaState();
-
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-    void closeSerialPort();
 
 
-#endif
-private slots:
-    void onDeviceDestr();
 
 private:
-    qint64 write(const QByteArray &arr);
 
-    void close();
 
-    quint8 lastConnectionType;
-    QString ifaceName;
-
-    quint8 writePrtt;
-
-    QByteArray writePreffix;
-    int dbgExtSrcId;
-    bool activeDbgMessages;
-
-    bool verboseMode;
-    bool stopAll;
-
-    DeviceTimeouts timeouts;
-
-    bool directAccess;
-    bool uartBlockPrtt;
-
-    bool isCoordinatorConfigReady;
-    quint8 apiErrCounter;
-    qint64 msecWhenCoordinatorWasGood;
-
-    bool lastCommandWasAtcn;
-
-    quint16 connectionDownCounter;
-
-    bool modemIsOverRS485;
 
 //    bool enExtIface;
 //    bool disableUartPrtt;

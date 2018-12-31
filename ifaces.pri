@@ -24,7 +24,9 @@ INCLUDEPATH  += $$PWD\
 #HEADERS += snif-android-src/qtandroidftdi.h
 #DEFINES += ADDANDROIDFTDIUART=1
 #}
-
+contains( QT, network) {
+include(../m2m-connector/m2m-connector.pri)
+}
 contains( QT, serialport) {
 HEADERS += \
     $$PWD/src/emb/checkcurrport.h
@@ -41,10 +43,12 @@ HEADERS += \
     $$PWD/src/emb/ifaceexchange.h \
     $$PWD/src/emb/ifaceexchangeserializedtypes.h \
     $$PWD/src/emb/ifaceexchangetypes.h \
-    $$PWD/src/emb/peredavatorpriority.h
+    $$PWD/src/emb/peredavatorpriority.h \
+    $$PWD/src/emb/conn2modem.h
 
 SOURCES += \
     $$PWD/src/emb/conf2modem.cpp \
     $$PWD/src/emb/conf2modemhelper.cpp \
     $$PWD/src/emb/ifaceexchange.cpp \
-    $$PWD/src/emb/ifaceexchangeserializedtypes.cpp
+    $$PWD/src/emb/ifaceexchangeserializedtypes.cpp \
+    $$PWD/src/emb/conn2modem.cpp
