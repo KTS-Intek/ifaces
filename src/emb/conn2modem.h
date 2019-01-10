@@ -11,11 +11,8 @@
 #include <QStringList>
 #include <QTcpSocket>
 
+#include "ifaceconnectiondefs.h"
 
-#define PORT_IS_BUSY        "\r\nUartIsBusy\r\n"
-#define PORT_IS_FREE        "\r\nUartIsFree\r\n"
-#define PORT_IS_BUSY_LOCAL  "\r\nUartIsBusyPrtt\r\n"
-#define PORT_IS_NFREE       "\r\nUartIs"
 
 
 struct DeviceTimeouts

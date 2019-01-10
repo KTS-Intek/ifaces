@@ -44,7 +44,8 @@ HEADERS += \
     $$PWD/src/emb/ifaceexchangeserializedtypes.h \
     $$PWD/src/emb/ifaceexchangetypes.h \
     $$PWD/src/emb/peredavatorpriority.h \
-    $$PWD/src/emb/conn2modem.h
+    $$PWD/src/emb/conn2modem.h \
+    $$PWD/src/emb/ifaceconnectiondefs.h
 
 SOURCES += \
     $$PWD/src/emb/conf2modem.cpp \

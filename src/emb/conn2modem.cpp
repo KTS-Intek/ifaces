@@ -72,9 +72,9 @@ bool Conn2modem::isConnectionWorks()
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
         switch(lastConnectionType){
-        case 0: if(need2closeSerial) closeSerialPort(); r = serialPort->isOpen(); break;
-        case 1: r = isTcpConnectionWorks(socket); break;
-        case 2: r = svahaConnector->isOpen(); break;
+        case IFACECONNTYPE_UART     : if(need2closeSerial) closeSerialPort(); r = serialPort->isOpen(); break;
+        case IFACECONNTYPE_TCPCLNT  : r = isTcpConnectionWorks(socket); break;
+        case IFACECONNTYPE_M2MCLNT  : r = svahaConnector->isOpen(); break;
         }
 
 #else
@@ -214,9 +214,9 @@ bool Conn2modem::waitForReadyRead(const int &msecs)
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
         switch(lastConnectionType){
-        case 0: return serialPort->waitForReadyRead(msecs);
-        case 1: return socket->waitForReadyRead(msecs);
-        case 2: return svahaConnector->waitForReadyRead(msecs);
+        case IFACECONNTYPE_UART     : return serialPort->waitForReadyRead(msecs);
+        case IFACECONNTYPE_TCPCLNT  : return socket->waitForReadyRead(msecs);
+        case IFACECONNTYPE_M2MCLNT  : return svahaConnector->waitForReadyRead(msecs);
         }
         return false ;
 
@@ -232,9 +232,9 @@ bool Conn2modem::waitForBytesWritten(const int &msecs)
 {
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
         switch(lastConnectionType){
-        case 0: return serialPort->waitForBytesWritten(msecs);
-        case 1: return socket->waitForBytesWritten(msecs);
-        case 2: return svahaConnector->waitForBytesWritten(msecs);
+        case IFACECONNTYPE_UART     : return serialPort->waitForBytesWritten(msecs);
+        case IFACECONNTYPE_TCPCLNT  : return socket->waitForBytesWritten(msecs);
+        case IFACECONNTYPE_M2MCLNT  : return svahaConnector->waitForBytesWritten(msecs);
         }
         return false ;
 
@@ -255,9 +255,9 @@ QByteArray Conn2modem::readAll()
     emit onReadWriteOperation(true);
 
         switch(lastConnectionType){
-        case 0: return serialPort->readAll();
-        case 1: return socket->readAll();
-        case 2: return svahaConnector->readAll();
+        case IFACECONNTYPE_UART     : return serialPort->readAll();
+        case IFACECONNTYPE_TCPCLNT  : return socket->readAll();
+        case IFACECONNTYPE_M2MCLNT  : return svahaConnector->readAll();
         }
         return "";
 
@@ -852,9 +852,9 @@ qint64 Conn2modem::write(const QByteArray &arr)
     emit onReadWriteOperation(false);
 
         switch(lastConnectionType){
-        case 0: return serialPort->write(arr);
-        case 1: return socket->write(arr);
-        case 2: return svahaConnector->write(arr);
+        case IFACECONNTYPE_UART     : return serialPort->write(arr);
+        case IFACECONNTYPE_TCPCLNT  : return socket->write(arr);
+        case IFACECONNTYPE_M2MCLNT  : return svahaConnector->write(arr);
         }
         return -1;
 
@@ -871,9 +871,9 @@ void Conn2modem::close()
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
         switch(lastConnectionType){
-        case 0: return serialPort->close();
-        case 1: return socket->close();
-        case 2: return svahaConnector->close();
+        case IFACECONNTYPE_UART     : return serialPort->close();
+        case IFACECONNTYPE_TCPCLNT  : return socket->close();
+        case IFACECONNTYPE_M2MCLNT  : return svahaConnector->close();
         }
         return;
 
