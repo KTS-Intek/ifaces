@@ -2,7 +2,7 @@
 #include <QTime>
 
 //#include "matildalimits.h"
-//#include "src/matilda/matildalimits.h"
+//#include "matildalimits.h"
 #include "conf2modemhelper.h"
 //#include "matildalimits.h"
 #include "embeelimits.h"
