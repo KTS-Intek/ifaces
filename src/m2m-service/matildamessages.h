@@ -2,6 +2,7 @@
 #define MATILDAMESSAGES_H
 
 #include <QObject>
+#include "showmesshelper4wdgtdef.h"
 
 class MatildaMessages : public QObject
 {
