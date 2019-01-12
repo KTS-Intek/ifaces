@@ -22,17 +22,21 @@ bool Conf2modem::openAconnection(const ZbyrConnSett &connSett, QString &connline
 {
     bool r = false;
     switch(connSett.connectionType){
-    case 1  : r = openTcpConnection(connSett.prdvtrAddr, connSett.prdvtrPort); break;
-    case 2  : r = openM2mConnection(connSett.m2mhash); break;
-    default : r = openSerialPort(connSett.prdvtrAddr, connSett.prdvtrPort, connSett.uarts); break;
+    case IFACECONNTYPE_TCPCLNT: r = openTcpConnection(connSett.prdvtrAddr, connSett.prdvtrPort); break;
+#ifdef ENABLE_EXTSUPPORT_OF_IFACES
+    case IFACECONNTYPE_M2MCLNT : r = openM2mConnection(connSett.m2mhash); break;
+    case IFACECONNTYPE_UART : r = openSerialPort(connSett.prdvtrAddr, connSett.prdvtrPort, connSett.uarts); break;
+#endif
     }
 
     if(r){
 
         switch(connSett.connectionType){
-        case 1  : connline = QString("%1\n%2").arg(connSett.prdvtrAddr).arg(connSett.prdvtrPort); break;
-        case 2  : connline = ConvertAtype::varHash2str(connSett.m2mhash); break;
-        default : connline = QString("%1\n%2").arg(connSett.prdvtrAddr).arg(connSett.prdvtrPort); break;
+        case IFACECONNTYPE_TCPCLNT: connline = QString("%1\n%2").arg(connSett.prdvtrAddr).arg(connSett.prdvtrPort); break;
+#ifdef ENABLE_EXTSUPPORT_OF_IFACES
+        case IFACECONNTYPE_M2MCLNT: connline = ConvertAtype::varHash2str(connSett.m2mhash); break;
+        case IFACECONNTYPE_UART : connline = QString("%1\n%2").arg(connSett.prdvtrAddr).arg(connSett.prdvtrPort); break;
+#endif
         }
     }
     return r;

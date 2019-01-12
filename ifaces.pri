@@ -8,7 +8,7 @@
 
 INCLUDEPATH  += $$PWD\
                 $$PWD/../../defines/defines
-
+                $$PWD/../../defines/define-types
 #isEmpty(ENABLE_EXTSUPPORT_OF_IFACES){
 #message(ENABLE_EXTSUPPORT_OF_IFACES is disabled)
 
@@ -45,7 +45,8 @@ HEADERS += \
     $$PWD/src/emb/ifaceexchangetypes.h \
     $$PWD/src/emb/peredavatorpriority.h \
     $$PWD/src/emb/conn2modem.h \
-    $$PWD/src/emb/ifaceconnectiondefs.h
+    $$PWD/src/emb/ifaceconnectiondefs.h \
+    $$PWD/src/shared/peredavatorpriority.h
 
 SOURCES += \
     $$PWD/src/emb/conf2modem.cpp \
