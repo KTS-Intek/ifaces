@@ -28,6 +28,8 @@ contains( QT, network) {
 include(../m2m-connector/m2m-connector.pri)
 }
 contains( QT, serialport) {
+DEFINES += HASSERIALLIB=1
+
 HEADERS += \
     $$PWD/src/emb/checkcurrport.h
 
