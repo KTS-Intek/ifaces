@@ -8,7 +8,10 @@
 #include <QtCore>
 #include <QHostAddress>
 #include "matildausertypes.h"
-#include "serializeddatacalculation.h"
+
+///[!] type-converter
+#include "src/m2m-service/serializeddatacalculation.h"
+
 #include "matildamessages.h"
 
 //#include "src/matilda/matildadatakeys.h"
