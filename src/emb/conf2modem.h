@@ -2,6 +2,8 @@
 #define CONF2MODEM_H
 
 #include "conn2modem.h"
+
+///[!] ifaces
 #include "src/emb/ifaceexchangeserializedtypes.h"
 
 

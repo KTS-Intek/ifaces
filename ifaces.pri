@@ -1,3 +1,11 @@
+#Dependencies -
+# ifaces
+# type-converter
+#
+#
+# Defines
+# ENABLE_EXTSUPPORT_OF_IFACES - it enables SerialPort and m2m-client
+
 
 #linux-beagleboard-g++:{
 #   QT -= gui
@@ -28,7 +36,6 @@ contains( QT, network) {
 include(../m2m-connector/m2m-connector.pri)
 }
 contains( QT, serialport) {
-DEFINES += HASSERIALLIB=1
 
 HEADERS += \
     $$PWD/src/emb/checkcurrport.h

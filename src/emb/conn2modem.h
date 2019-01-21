@@ -2,14 +2,20 @@
 #define CONN2MODEM_H
 
 #include <QObject>
-#ifdef ENABLE_EXTSUPPORT_OF_IFACES
-#include "src/m2m-service/svahaserviceconnector.h"
-#include "checkcurrport.h"
-#include <QSerialPort>
-#endif
 #include <QIODevice>
 #include <QStringList>
 #include <QTcpSocket>
+
+#ifdef ENABLE_EXTSUPPORT_OF_IFACES
+#include <QSerialPort>
+
+///[!] m2m-connector
+#include "src/m2m-service/svahaserviceconnector.h"
+
+///[!] ifaces
+#include "checkcurrport.h"
+#endif
+
 
 #include "ifaceconnectiondefs.h"
 
