@@ -19,16 +19,8 @@
 //#include "gui-src/showmesshelper4wdgt.h"
 //#include "src/firefly/fireflyglobal.h"
 
+#include "showmesshelper4wdgtdef.h"
 
-#define MESS_OPERATION_IN_PROGRESS      -1
-#define MESS_NO_MESS                    0
-#define MESS_NO_TABLE                   1
-#define MESS_CORRUPTED_DATA             2
-#define MESS_CORRUPTED_PACKET           3
-#define MESS_NO_ANSWER_FROM_DEVICE      4
-#define MESS_NO_DATA                    5
-#define MESS_OPERATION_ABORTED          6
-#define MESS_CANT_CONNECT2DEV           7
 
 SvahaSocket::SvahaSocket(const quint8 &sesionId, QObject *parent) : QTcpSocket(parent)
 {

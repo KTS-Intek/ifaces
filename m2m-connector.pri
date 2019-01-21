@@ -1,3 +1,8 @@
+#Dependencies -
+# type-converter
+#
+
+
 QT       += core network
 
 linux-beagleboard-g++:{
