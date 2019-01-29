@@ -32,7 +32,7 @@ void CheckCurrPort::run()
     if(true){
         QFileInfo fi(currPort);
         if(fi.exists())
-            dt = fi.birthTime();
+            dt = fi.created();
     }
 
     while(true){
@@ -61,7 +61,7 @@ void CheckCurrPort::run()
         if(!found){
 
             QFileInfo fi(currPort);
-            if(fi.exists() && fi.birthTime() == dt && dt.isValid())
+            if(fi.exists() && (!dt.isValid() || (fi.created() == dt && dt.isValid())))
                 continue;
 
              emit portDisconnected(true);

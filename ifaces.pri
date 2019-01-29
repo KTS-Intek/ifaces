@@ -36,7 +36,15 @@ INCLUDEPATH  += $$PWD\
 #DEFINES += ADDANDROIDFTDIUART=1
 #}
 contains( QT, network) {
-include(../m2m-connector/m2m-connector.pri)
+
+    contains(DEFINES, ENABLE_EXTSUPPORT_OF_IFACES){
+        include(../m2m-connector/m2m-connector.pri)
+        message($$TARGET ", ifaces: m2m-connector is enabled")
+    }else{
+        message($$TARGET ", ifaces: m2m-connector is disabled")
+
+    }
+
 }
 contains( QT, serialport) {
 
