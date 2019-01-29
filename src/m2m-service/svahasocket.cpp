@@ -14,10 +14,6 @@
 
 #include "matildamessages.h"
 
-//#include "src/matilda/matildadatakeys.h"
-//#include "src/widgets/tableheaders.h"
-//#include "gui-src/showmesshelper4wdgt.h"
-//#include "src/firefly/fireflyglobal.h"
 
 #include "showmesshelper4wdgtdef.h"
 
@@ -762,7 +758,7 @@ int SvahaSocket::onCOMMAND_ERROR_CODE(const QVariantHash &h, bool &rezIsGood)
     if(!rezIsGood)
         return MESS_CORRUPTED_DATA;
 
-    QString commandName;// = ShowMessHelper4wdgt::name4command(h.value("lcmd").toInt());
+    QString commandName;// = ShowMessHelperCore::name4command(h.value("lcmd").toInt());
     if(commandName.isEmpty())
         commandName = QString::number(h.value("lcmd").toInt());
 
@@ -778,7 +774,7 @@ int SvahaSocket::onCOMMAND_ERROR_CODE(const QVariantHash &h, bool &rezIsGood)
     case ERR_MAX_TABLE_COUNT : mess = tr("Command: %1. Table count limit").arg(commandName); break;
     case ERR_CORRUPTED_DATA : mess = tr("Command: %1. Data is corrupted").arg(commandName); break;
     case ERR_DUPLICATE_NI : mess = tr("Command: %1. Duplicating NI").arg(commandName); break;
-    case ERR_DUPLICATE_SN : mess = tr("Command: %1. Duplicating SN").arg(commandName); break;
+    case ERR_DUPLICATE_SN : mess = tr("Command: %1. Duplicating S/N").arg(commandName); break;
     case ERR_DATE_NOT_VALID : mess = tr("Command: %1. Date is invalid").arg(commandName); break;
     case ERR_COMMAND_NOT_ALLOWED : mess = tr("Command: %1. Command is not allowed").arg(commandName); break;
     case ERR_ACCESS_DENIED : mess = tr("Command: %1. Command is not allowed").arg(commandName); break;
@@ -823,7 +819,7 @@ int SvahaSocket::onCOMMAND_ERROR_CODE_EXT(const QVariantHash &h, bool &rezIsGood
     if(!rezIsGood)
         return MESS_CORRUPTED_DATA;
 
-    QString commandName ;//= ShowMessHelper4wdgt::name4command(h.value("lcmd").toInt());
+    QString commandName ;//= ShowMessHelperCore::name4command(h.value("lcmd").toInt());
     if(commandName.isEmpty())
         commandName = QString::number(h.value("lcmd").toInt());
 
@@ -840,7 +836,7 @@ int SvahaSocket::onCOMMAND_ERROR_CODE_EXT(const QVariantHash &h, bool &rezIsGood
     case ERR_MAX_TABLE_COUNT : mess = tr("Command: %1. Table count limit").arg(commandName); break;
     case ERR_CORRUPTED_DATA : mess = tr("Command: %1. Corrupted data").arg(commandName); break;
     case ERR_DUPLICATE_NI : mess = tr("Command: %1. Duplicating NI").arg(commandName); break;
-    case ERR_DUPLICATE_SN : mess = tr("Command: %1. Duplicating SN").arg(commandName); break;
+    case ERR_DUPLICATE_SN : mess = tr("Command: %1. Duplicating S/N").arg(commandName); break;
     case ERR_DATE_NOT_VALID : mess = tr("Command: %1. Date is not valid").arg(commandName); break;
     case ERR_COMMAND_NOT_ALLOWED : mess = tr("Command: %1. Command is not allowed").arg(commandName); break;
     case ERR_ACCESS_DENIED : mess = tr("Command: %1. Command is not allowed").arg(commandName); break;
@@ -865,7 +861,7 @@ int SvahaSocket::onCOMMAND_ERROR_CODE_EXT(const QVariantHash &h, bool &rezIsGood
     }
 
     if(addRedLine){
-//        mess = ShowMessHelper4wdgt::addWithFontColorRed(mess);
+//        mess = ShowMessHelperCore::addWithFontColorRed(mess);
         if(!h.value("em").toString().isEmpty())
             mess.append(tr(". Device: %1").arg(h.value("em").toString()) + "(");
     }
