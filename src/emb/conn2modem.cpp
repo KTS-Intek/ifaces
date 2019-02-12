@@ -15,6 +15,7 @@ Conn2modem::Conn2modem(const int &dbgExtSrcId, const bool &verboseMode, QObject 
     writePrtt = 0;
     apiErrCounter = 0;
     msecWhenCoordinatorWasGood = 0;
+
 }
 
 
@@ -71,11 +72,11 @@ bool Conn2modem::isConnectionWorks()
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
-        switch(lastConnectionType){
-        case IFACECONNTYPE_UART     : if(need2closeSerial) closeSerialPort(); r = serialPort->isOpen(); break;
-        case IFACECONNTYPE_TCPCLNT  : r = isTcpConnectionWorks(socket); break;
-        case IFACECONNTYPE_M2MCLNT  : r = svahaConnector->isOpen(); break;
-        }
+    switch(lastConnectionType){
+    case IFACECONNTYPE_UART     : if(need2closeSerial) closeSerialPort(); r = serialPort->isOpen(); break;
+    case IFACECONNTYPE_TCPCLNT  : r = isTcpConnectionWorks(socket); break;
+    case IFACECONNTYPE_M2MCLNT  : r = svahaConnector->isOpen(); break;
+    }
 
 #else
     r = isTcpConnectionWorks(socket);
@@ -166,10 +167,15 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
         if(!readArrHasData && hasDataCounter != 0)
             readArrHasData = !readArr.isEmpty();
 
+
 //        if(isQuickMode)
 //            break;
 
     }
+
+
+//    qDebug() << "readDevice " << time.elapsed() << timeouts.block << globalTime.elapsed() << timeouts.global << (readArr.isEmpty() || time.elapsed() < timeOut_c) << (globalTime.elapsed() < globalTimeMax) ;
+
     emit dataReadWriteReal(readArr, ifaceName, true);
     if(!uartAccessChecked && (directAccess || uartBlockPrtt || checkUartAccess(readArr, globalTime.elapsed()))){
         if(sayGoodByeIfUartIsNFree("readDevice ", 555, readArr.isEmpty())){
@@ -199,8 +205,24 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
 QByteArray Conn2modem::readDeviceQuick(const QByteArray &endSymb, const bool &isclearbufmode)
 {
     const DeviceTimeouts timeoutsl = this->timeouts;
+
     timeouts.global = isclearbufmode ? 60 : 250;
     timeouts.block = isclearbufmode ? 20 : 50;
+
+#ifdef DISABLE_QUICK_READMODE
+     if(!isclearbufmode){
+         timeouts.global = qMin(11000, timeoutsl.global);
+         timeouts.block = qMin(500, timeoutsl.block);
+     }
+#endif
+
+#ifdef ENABLE_BIGGER_BLOCKTIMEOUT
+    if(!isclearbufmode){
+        timeouts.global = ENABLE_BIGGER_BLOCKTIMEOUT * 5;
+        timeouts.block = ENABLE_BIGGER_BLOCKTIMEOUT;
+    }
+#endif
+
     const QByteArray r = readDevice(endSymb, true);
     this->timeouts = timeoutsl;
 
@@ -254,12 +276,12 @@ QByteArray Conn2modem::readAll()
 
     emit onReadWriteOperation(true);
 
-        switch(lastConnectionType){
-        case IFACECONNTYPE_UART     : return serialPort->readAll();
-        case IFACECONNTYPE_TCPCLNT  : return socket->readAll();
-        case IFACECONNTYPE_M2MCLNT  : return svahaConnector->readAll();
-        }
-        return "";
+    switch(lastConnectionType){
+    case IFACECONNTYPE_UART     : return serialPort->readAll();
+    case IFACECONNTYPE_TCPCLNT  : return socket->readAll();
+    case IFACECONNTYPE_M2MCLNT  : return svahaConnector->readAll();
+    }
+    return "";
 
 
 #else
@@ -316,7 +338,7 @@ qint64 Conn2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAnd
     if(!ignoreDaAndPrtt && directAccess)
         return 0;
 
-    if(writeArr.isEmpty() || lastConnectionType == 0xFF)
+    if(writeArr.isEmpty() || lastConnectionType == IFACECONNTYPE_UNKN)
         return 0;
 
 
@@ -356,7 +378,7 @@ bool Conn2modem::openTcpConnection(const QStringList &hosts, const QList<quint16
 bool Conn2modem::openTcpConnection(const QString &host, const quint16 &port)
 {
     onDeviceDestr();//reset params
-    lastConnectionType = 1;
+    lastConnectionType = IFACECONNTYPE_TCPCLNT;
     if(verboseMode)
         qDebug() << "Conf2modem::openTcpConnection()";
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection host=%1, port=%2, myPrtt=%3").arg(host).arg(port).arg(QString(writePreffix)));
@@ -398,7 +420,7 @@ bool Conn2modem::openM2mConnection(const QVariantHash &oneProfile)
 {
     onDeviceDestr();//reset params
 
-    lastConnectionType = 2;
+    lastConnectionType = IFACECONNTYPE_M2MCLNT;
     stopAll = false;
 
     const int timeout = qMax(timeouts.global, 7000);
@@ -428,7 +450,7 @@ bool Conn2modem::openSerialPort(const QString &portName, const qint32 &baudRate,
 {
     onDeviceDestr();//reset params
  stopAll = false;
-    lastConnectionType = 0;
+    lastConnectionType = IFACECONNTYPE_UART;
     QString mess;
     const bool r = (uarts.isEmpty() && !portName.isEmpty()) ?
         findModemOnPort("", baudRate, portName.split("\n"), mess) : //manual mode
@@ -468,11 +490,13 @@ bool Conn2modem::findModemOnPort(QString defPortName, qint32 baudR, QStringList 
         if(serialPort->open(QIODevice::ReadWrite)){
             if(serialPort->setBaudRate(baudR) && serialPort->setParity(QSerialPort::NoParity) && serialPort->setStopBits(QSerialPort::OneStop) &&
                     serialPort->setDataBits(QSerialPort::Data8) && serialPort->setFlowControl(QSerialPort::NoFlowControl)){
+
                 serialPort->clear();
                 need2closeSerial = false;
                 emit onSerialPortOpened(portN);
+                 const bool r = request2modemOn();
 
-                if(request2modemOn())
+                if(r)
                     return true;
 
                 emit stopCheckCurrPort();
@@ -489,6 +513,7 @@ bool Conn2modem::findModemOnPort(QString defPortName, qint32 baudR, QStringList 
 
 bool Conn2modem::request2modemOn()
 {
+
     for(int i = 1; i <= 3 && !stopAll; i++){
         emit currentOperation(tr("Detecting the modem... Sending the AT command to %1.").arg(serialPort->portName()));
         writeATcommand("+++");
@@ -578,6 +603,14 @@ bool Conn2modem::canCheckUartAccess(const bool &arrIsEmpty, const int &msecElaps
 
 bool Conn2modem::isCoordinatorFree()
 {
+#ifdef ENABLE_EXTSUPPORT_OF_IFACES
+    if(lastConnectionType == IFACECONNTYPE_UART){
+        directAccess = false;
+        uartBlockPrtt = false;
+//        return true;
+    }
+#endif
+
     const bool da = directAccess;
     const bool busy = uartBlockPrtt;
 
@@ -607,7 +640,6 @@ bool Conn2modem::isCoordinatorFree()
         readDeviceQuick("\r\n", false);//в цій функції уже є перевірка прямого доступу
 
     }
-
     if(da != directAccess){
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem isCoordinatorFree da directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, da=%4")
                               .arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(da));
@@ -736,7 +768,7 @@ void Conn2modem::incrementApiErrCounter()
 {
     apiErrCounter++;
 
-    if(lastConnectionType != 0xFF && apiErrCounter > MAX_TRIES_FOR_CONFIG){
+    if(lastConnectionType != IFACECONNTYPE_UNKN && apiErrCounter > MAX_TRIES_FOR_CONFIG){
         uartBlockPrtt = directAccess = false;
         close();
     }
@@ -803,6 +835,7 @@ void Conn2modem::closeSerialPortDirect()
 
 void Conn2modem::createDevices()
 {
+    isCoordinatorConfigReady = false;
     socket = new QTcpSocket(this);
     connect(socket, SIGNAL(disconnected()), this, SIGNAL(onConnectionClosed()) );
 
@@ -832,11 +865,16 @@ void Conn2modem::onDeviceDestr()
     close();
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem onDeviceDestr directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, apiErrCounter=%4")
                           .arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(apiErrCounter));
-    modemIsOverRS485 = isCoordinatorConfigReady = false;
+    modemIsOverRS485 = false;
+
+
+    if(qAbs(msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) > MAX_MSEC_FOR_COORDINATOR_READY)
+        isCoordinatorConfigReady = false;
+
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
     lastConnectionType = 0xFF;
 #else
-    lastConnectionType = 1;//tcp client
+    lastConnectionType = IFACECONNTYPE_TCPCLNT;//tcp client
 #endif
     directAccess = false;
     uartBlockPrtt = false;

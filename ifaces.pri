@@ -8,6 +8,8 @@
 #
 # Defines
 # ENABLE_EXTSUPPORT_OF_IFACES - it enables SerialPort and m2m-client
+# ENABLE_BIGGER_BLOCKTIMEOUT - value is msec, default value is 50
+# DISABLE_QUICK_READMODE - do not reduce timeouts less than 1000 - global and 500 msec for block when the modem is reading
 
 
 #linux-beagleboard-g++:{
@@ -36,7 +38,7 @@ INCLUDEPATH  += $$PWD\
 #DEFINES += ADDANDROIDFTDIUART=1
 #}
 contains( QT, network) {
-
+DEFINES += HASNETWORKQTLIB
     contains(DEFINES, ENABLE_EXTSUPPORT_OF_IFACES){
         include(../m2m-connector/m2m-connector.pri)
         message($$TARGET ", ifaces: m2m-connector is enabled")

@@ -58,7 +58,6 @@ bool Conf2modem::enterCommandMode()
 
     readAll();//clear a buffer
 
-
     write2dev(dataP);
 
     QByteArray readArr = readDeviceQuick("\r\n", false);
@@ -188,7 +187,7 @@ bool Conf2modem::readAboutModem(QVariantMap &atcommands, QString &errStr)
 
     list2write.removeOne("ATSM");
 
-    const QMap<QString,QString> map = getTheModemInfo(list2write, false, false, tr("Read the modem"), errStr);
+    const QMap<QString,QString> map = getTheModemInfo(list2write, false, false, tr("Reading the modem"), errStr);
     if(map.isEmpty())
         return false;
 
@@ -196,15 +195,22 @@ bool Conf2modem::readAboutModem(QVariantMap &atcommands, QString &errStr)
     for(int i = 0, imax = list2write.size(); i < imax; i++)
         atcommands.insert(list2write.at(i), map.value(list2write.at(i)).toUpper());
 
+    bool exitCommandModeLater = true;
     if(!atcommands.contains("ATSM") ){
         if(atcommands.value("ATAD").toString().toUpper() == "C" && atcommands.value("ATVR").toString().mid(1).toInt() > 205){
-            const QMap<QString,QString> map = getTheModemInfo("ATSM", true, false, tr("Read the modem"), errStr);
+            const QMap<QString,QString> map = getTheModemInfo("ATSM", true, false, tr("Reading the modem"), errStr);
             if(map.isEmpty())
                 return false;
             atcommands.insert(QString("ATSM"), map.value("ATSM").toUpper());
+            exitCommandModeLater = false;
         }else
             atcommands.insert(QString("ATSM"), "!");
     }
+    if(exitCommandModeLater){
+        writeATcommand("ATCN");
+        readAll();
+    }
+
     return true;
 
 }
@@ -360,11 +366,10 @@ bool Conf2modem::writeSomeCommand(const QStringList &list2write, const bool &ent
         }
 
         bool hasErr = false;
-        QByteArray readarr;
 
         for(int j = 0; j < jmax && !hasErr; j++){
             writeATcommand(list2write.at(j));// "ATNR 5");
-            readarr = readDevice();
+            const QByteArray readarr = readDevice();
             if(readarr.startsWith("OK\r\n") || readarr.endsWith("OK\r\n"))
                 continue;
             hasErr = true;
@@ -405,6 +410,32 @@ bool Conf2modem::writeSomeCommand(const QStringList &list2write, const bool &ent
 
     }
     return false;
+}
+
+
+//-------------------------------------------------------------------------------------
+
+bool Conf2modem::wait4doubleOk(const bool &isAtlbCommand, const bool &ignoreSecondErr)
+{
+    QTime time;
+    time.start();
+    QByteArray readArr = readDevice().toUpper();
+    if(readArr.isEmpty())
+        return false;
+
+    const int maxtimeout = isAtlbCommand ? 7500 : 3000;
+    const QByteArray answr = isAtlbCommand ? "OK\r\nOK\r\r\n" : "OK\r\nOK\r\n";
+
+    const QByteArray answr2 = ignoreSecondErr ? "OK\r\nERROR\r\r\n" : QByteArray();
+
+    for(int nn = 0; nn < 1000 && time.elapsed() < maxtimeout && readArr != answr && !stopAll; nn++){
+        readArr.append(readDevice().toUpper());
+        if(ignoreSecondErr && readArr == answr2)
+            return true;
+    }
+    //for ATFR I need only OK
+    return (isAtlbCommand ? (readArr == answr) : (readArr.contains("OK")));
+
 }
 
 //-------------------------------------------------------------------------------------
@@ -485,22 +516,14 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
         writeATcommand("ATFR");
 //        readDevice();
 
-        QTime time;
-        time.start();
-        QByteArray readArr = readDevice().toUpper();
-        if(readArr.isEmpty()){
+        wasOk4atfr = wait4doubleOk(false, false);
+
+        if(!wasOk4atfr){
             writeATcommand("ATCN");
             readDeviceQuick("\r\n", true);
             wasOk4atfr = true;
-        }else{
-            for(int nn = 0; nn < 1000 && time.elapsed() < 3000 && readArr != "OK\r\nOK\r\n" && !stopAll; nn++)
-                readArr.append(readDevice().toUpper());
-
-            wasOk4atfr = readArr.contains("OK");
         }
-
-        if(wasOk4atfr)
-            break;
+        break;
 
 
     }
@@ -745,6 +768,8 @@ bool Conf2modem::isCoordinatorGood(const bool &forced, const bool &readAboutZigB
     if(!forced && isCoordinatorConfigReady && qAbs(msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) < MAX_MSEC_FOR_COORDINATOR_READY )
         return isCoordinatorConfigReady;
 
+    qDebug() << "isCoordinatorGood " << qAbs(msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) << MAX_MSEC_FOR_COORDINATOR_READY ;
+
     isCoordinatorConfigReady = false;
     if(enableDisableApi(true, readAboutZigBee)){
         emit currentOperation(tr("The API mode is active"));
@@ -939,6 +964,367 @@ bool Conf2modem::decodeNtdOneLine(const QString &line, const qint64 &msec, const
     return true;
 }
 
+//-------------------------------------------------------------------------------------
+#ifdef ENABLE_EMBEEMODEM_EXTENDED_OPERATIONS
+
+bool Conf2modem::quickRadioSetupExt(const QVariantMap &insettings, QString &errstr)
+{
+
+//    j.insert("channelold", lQrsParams.oldparams.channel);
+//    j.insert("idold", lQrsParams.oldparams.id);
+//    j.insert("keyold", lQrsParams.oldparams.key);
+//    j.insert("channelnew", lQrsParams.newparams.channel);
+//    j.insert("idnew", lQrsParams.newparams.id);
+//    j.insert("keynew", lQrsParams.newparams.key);
+//    j.insert("writeold", lQrsParams.writeOld);
+
+//    j.insert("changeni", lQrsParams.changeNI);
+
+//    QStringList listni = getNiList();
+
+//    if(lQrsParams.changeNI){
+//        j.insert("qrsmulticastmode", true);
+//        if(!listni.isEmpty())
+//            listni = listni.first().split(" ");//only first item
+//    }else{
+//        j.insert("qrsmulticastmode", lQrsParams.qrsmulticastmode);
+
+//        if(lQrsParams.qrsmulticastmode)
+//            listni = QString("#0").split(" ");
+
+//    }
+
+//    if(listni.isEmpty())
+//        return QVariantMap();
+//    j.insert("listni", listni.join(" "));
+
+    QMap<QString,QString> mapAboutTheCoordinator;
+    if(!isCoordinatorReady4quickRadioSetupExt(insettings, mapAboutTheCoordinator, errstr))
+        return false;
+
+    const QStringList listni = insettings.value("listni").toString().split(" ", QString::SkipEmptyParts);
+
+    if(listni.isEmpty()){
+        errstr = tr("bad operator");
+        return true;
+    }
+
+
+    if(insettings.value("changeni").toBool()){
+        if(!changeni(QString(), listni.first(), false)){
+            errstr = tr("can't change NI");
+            return true;
+        }
+    }
+    if(stopAll)
+        return true;
+
+
+    const QStringList listniready = sendNetworParams(listni, insettings);
+    if(stopAll)
+        return true;
+
+    return applyNewNetworkSettings(listniready, insettings, mapAboutTheCoordinator);
+
+
+
+}
+
+//-------------------------------------------------------------------------------------
+
+
+bool Conf2modem::isCoordinatorReady4quickRadioSetupExt(const QVariantMap &insettings, QMap<QString, QString> &mapAboutTheModem, QString &errstr)
+{
+    bool modemtocoordiantor = false;
+
+    const bool hasMulticastMessages = (insettings.value("qrsmulticastmode").toBool() || insettings.value("changeni").toBool());
+
+    if(true){
+        QStringList lcommands = QString("ATVR ATHV ATSL ATSH").split(" ");
+
+        if(!insettings.value("writeold").toBool()){
+            const QStringList l = lcommands;
+            lcommands = QString("ATAD ATAP ATSM ATCP0 ATCH ATID").split(" ");
+
+            if(hasMulticastMessages)
+                lcommands.append("ATMD");
+
+            lcommands.append(l);
+        }
+
+        mapAboutTheModem = getTheModemInfo(lcommands, false, false, tr("Checking the configuration..."), errstr);
+        if(mapAboutTheModem.isEmpty())
+            return false;
+
+        if(!insettings.value("writeold").toBool()){
+            const QStringList lcommandsanswr = QString("c 1 0 6").split(" ");
+
+            for(int i = 0, imax = lcommandsanswr.size(); i < imax; i++){
+                const QString s = mapAboutTheModem.value(lcommands.at(i));
+                const int answr = s.toInt();
+
+                if(answr != lcommandsanswr.at(i).toInt() && mapAboutTheModem.value(lcommands.at(i)).toUpper() != lcommandsanswr.at(i).toUpper()){
+                    modemtocoordiantor = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    if(modemtocoordiantor || insettings.value("writeold").toBool()){
+
+        QStringList lcommands;
+
+        lcommands.append("ATAD C");
+        lcommands.append("ATAP 1");
+        lcommands.append("ATSM 0");
+        lcommands.append("ATCP0 6");
+        if(hasMulticastMessages){
+            lcommands.append("ATMD 1");
+            mapAboutTheModem.insert("ATMD", "01");
+        }
+
+        int wait4readiness = 5000;
+        if(!modemtocoordiantor){
+            wait4readiness = 35000;
+            lcommands.append(QString("ATCH %1").arg(insettings.value("channelold").toInt(), 0, 16));
+            lcommands.append(QString("ATID %1").arg(insettings.value("idold").toInt(), 0, 16));
+            lcommands.append(QString("ATKY %1").arg(insettings.value("keyold").toString()));
+        }
+
+        lcommands.append("ATWR");
+         if(!writeSomeCommand(lcommands, true, true, true, tr("Writing the configuration"), errstr))
+             return false;
+
+         QTime time;
+         time.start();
+         emit currentOperation(tr("Waiting for the network rediness..."));
+
+         for(int i = 0; i < 10000 && time.elapsed() < wait4readiness && !stopAll; i++){
+             readDevice();//wait for the second OK, readiness
+             QThread::msleep(200);
+         }
+
+         for(int i = 0, imax = lcommands.size(); i < imax; i++){
+             const QString s = lcommands.at(i);
+             mapAboutTheModem.insert(s.split(" ").first(), s.split(" ").last());
+         }
+
+         modemtocoordiantor = true;//
+    }
+
+    if(!modemtocoordiantor){//exit the command mode
+        const int atmd = hasMulticastMessages ? mapAboutTheModem.value("ATMD").toInt() : 7;
+        if(!writeSomeCommand( ( atmd > 0) ? QString() :  QString("ATMD 1\nATWR"), false, true, false, tr("Exiting the command mode"), errstr))
+            return false;
+    }
+    return true;
+
+}
+
+//-------------------------------------------------------------------------------------
+
+QStringList Conf2modem::sendNetworParams(const QStringList &listni, const QVariantMap &insettings)
+{
+    const EmbeeNetworkParamsStr netparams = convert2netParams(insettings, QString("channelnew idnew  keynew"));
+    QStringList listniready;
+    for(int i = 0, imax = listni.size(); i < imax && !stopAll; i++){
+
+        for(int r = 0; r < 3 && !stopAll; r++){
+
+            if(r > 0){
+                QThread::sleep(2);
+                readAll();
+            }
+
+            const QByteArray writearr = QString("%1\r\n%2\r\n%3\r\n%4\r\n")
+                    .arg((listni.at(i) == "#0") ? QString() : listni.at(i))
+                    .arg(netparams.chhex)
+                    .arg(netparams.idhex)
+                    .arg(netparams.key).toUtf8();
+            write2dev(writearr);
+
+            const QByteArray readarr = readDevice();
+            if(!readarr.startsWith("OK\r\n"))
+                continue;
+            listniready.append(listni.at(i));
+            break;
+        }
+
+    }
+    return listniready;
+}
+
+//-------------------------------------------------------------------------------------
+
+bool Conf2modem::applyNewNetworkSettings(const QStringList &listni, const QVariantMap &insettings,  const QMap<QString, QString> &mapAboutTheCoordinator)
+{
+    bool parameterssended = false;
+    if(!listni.isEmpty()){
+        for(int i = 0, j = 0; i < 3; i++){
+
+            if(i > 0){
+                QThread::sleep(3);
+                readAll();
+                if(j > 0){
+                    writeATcommand("ATCN");
+                    readDevice();
+                }
+                j = 0;
+            }
+
+            if(stopAll)
+                return true;
+
+            if(!enterCommandMode(tr("Applying new network setings"))){
+                j++;
+                continue;
+            }
+
+            if(stopAll)
+                return true;
+            writeATcommand("ATLB 4");
+            if(!wait4doubleOk(true, false)){
+                j++;
+                continue;
+            }
+
+            QThread::sleep(2);//some timeout
+
+
+            writeATcommand("ATDN #0");
+            if(!readDevice().startsWith("OK")){
+                j++;
+                continue;
+            }
+
+            writeATcommand("ATLB 5");
+            if(!wait4doubleOk(true, true)){
+                j++;
+                continue;
+            }
+            parameterssended = true;
+            break;
+
+        }
+    }
+
+    const EmbeeNetworkParamsStr netparamsnew = convert2netParams(insettings, QString("channelnew idnew  keynew"));
+    const EmbeeNetworkParamsStr netparamsold = insettings.value("writeold").toBool() ? convert2netParams(insettings, QString("channelold idold  keyold")) :
+                                                                                       convert2netParams(mapAboutTheCoordinator.value("ATCH").toInt(0, 16), mapAboutTheCoordinator.value("ATID").toInt(0, 16), "#0");
+
+    QVariantMap aboutcoordinator;
+    const QList<QString> lk = mapAboutTheCoordinator.keys();
+    for(int i = 0, imax = lk.size(); i < imax; i++)
+        aboutcoordinator.value(lk.at(i), mapAboutTheCoordinator.value(lk.at(i)));
+
+
+    emit qrsStatus(QDateTime::currentMSecsSinceEpoch(), parameterssended ? listni : QStringList(), insettings.value("listni").toString().split(" "),
+                   netparamsold.chhex, netparamsold.idhex, netparamsold.key,
+                   netparamsnew.chhex, netparamsnew.idhex, netparamsnew.key,
+                   insettings.value("writeold").toBool(), insettings.value("changeni").toBool(), insettings.value("qrsmulticastmode").toBool(), aboutcoordinator, insettings );
+
+
+//    void qrsStatus(qint64 msec, QStringList listniready, QStringList listniall,
+//                   QString channelold, QString idold, QString keyold,
+//                   QString channelnew, QString idnew, QString keynew,
+//                   bool writeold, bool changeni, bool qrsmulticastmode, QVariantMap aboutcoordinator, QVariantHash insettings);
+
+
+    if(parameterssended){
+        QThread::sleep(2);
+        writeATcommand("ATFR");
+        readDevice();
+    }
+
+    return parameterssended;
+}
+
+//-------------------------------------------------------------------------------------
+
+bool Conf2modem::changeni(const QString &from, const QString &toni, const bool &sendatlb5)
+{
+
+    for(int i = 0, j = 0; i < 3 && !stopAll; i++){
+
+        if(i > 0){
+            QThread::sleep(3);
+            readAll();
+            if(j > 0){
+                writeATcommand("ATCN");
+                readDevice();
+            }
+            j = 0;
+        }
+
+        if(stopAll)
+            return true;
+        write2dev(QString("%1\r\n%2\r\n").arg(from).arg(toni).toUtf8());
+
+        const QByteArray readarr = readDevice();
+        if(!readarr.startsWith("OK\r\n"))
+            continue;
+
+
+
+
+        if(!enterCommandMode(tr("Applying new NI"))){
+            j++;
+            continue;
+        }
+
+        if(stopAll)
+            return true;
+        writeATcommand("ATLB 2");
+        if(!wait4doubleOk(true, false)){
+            j++;
+            continue;
+        }
+
+        QThread::sleep(2);//some timeout
+
+        if(stopAll)
+            return true;
+        if(!sendatlb5){
+
+            writeATcommand("ATCN");
+            readDevice();
+            return true;
+        }
+
+
+        writeATcommand("ATDN " + toni);
+        if(!readDevice().startsWith("OK"))
+            return false;
+
+        writeATcommand("ATLB 5");
+        return wait4doubleOk(true, true);
+
+    }
+    return stopAll;
+}
+
+//-------------------------------------------------------------------------------------
+
+Conf2modem::EmbeeNetworkParamsStr Conf2modem::convert2netParams(const int &channel, const int &id, const QString &key)
+{
+    return EmbeeNetworkParamsStr(QString("%1").arg(channel, 0, 16).rightJustified(2, '0'), QString("%1").arg(id, 0, 16).rightJustified(4, '0'), key.left(32));
+}
+
+//-------------------------------------------------------------------------------------
+
+Conf2modem::EmbeeNetworkParamsStr Conf2modem::convert2netParams(const QVariantMap &map, const QString &keysChIdKy)
+{
+    return convert2netParams(map, keysChIdKy.split(" ", QString::SkipEmptyParts));
+}
+
+Conf2modem::EmbeeNetworkParamsStr Conf2modem::convert2netParams(const QVariantMap &map, const QStringList &lkeysChIdKy)
+{
+    return convert2netParams(map.value(lkeysChIdKy.at(0)).toInt(), map.value(lkeysChIdKy.at(1)).toInt(), map.value(lkeysChIdKy.at(2)).toString());
+
+}
+
+#endif
 
 //-------------------------------------------------------------------------------------
 

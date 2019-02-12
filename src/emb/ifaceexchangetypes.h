@@ -40,8 +40,9 @@ struct PollObjectState
 struct TaskState
 {
     quint32 taskId;
-    bool noTasks;
-    TaskState() : taskId(-1), noTasks(true) {}
+    bool noTasks;//завершено обробку завдання, будь яка причина
+    bool tasksProcessingEnded;//true - інтерфейс закрито бо обмін з лічильником завершено, а нові завдання відсутні. false - є завдання і була спроба відкриття з'єднання
+    TaskState() : taskId(-1), noTasks(true), tasksProcessingEnded(true) {}
 } ;
 
 

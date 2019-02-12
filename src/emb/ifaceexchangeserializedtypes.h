@@ -63,6 +63,9 @@ class IfaceExchangeSerializedTypes
 public:
     static void makeRegistration();
 
+    static ZbyrConnSett getZbyrConnSettFromArgs(const QStringList &list, bool &ok);
+
+
 };
 //must be in a header file, outside the class!!!
 

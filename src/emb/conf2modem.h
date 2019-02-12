@@ -54,6 +54,9 @@ public:
     bool writeSomeCommand(const QStringList &list2write, const bool &enterTheCommandMode, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr);
 
 
+    bool wait4doubleOk(const bool &isAtlbCommand, const bool &ignoreSecondErr);
+
+
     QMap<QString,QString> getTheModemInfo(const QString &atcommand, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr);
 
     QMap<QString,QString> getTheModemInfo(const QStringList &list2read, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr);
@@ -75,6 +78,22 @@ public:
 
     bool decodeNtdOneLine(const QString &line, const qint64 &msec, const bool &wasRestored, QStringList &listreadynis);
 
+
+#ifdef ENABLE_EMBEEMODEM_EXTENDED_OPERATIONS
+
+    bool quickRadioSetupExt(const QVariantMap &insettings, QString &errstr);
+
+    bool isCoordinatorReady4quickRadioSetupExt(const QVariantMap &insettings, QMap<QString,QString> &mapAboutTheModem, QString &errstr);
+
+    QStringList sendNetworParams(const QStringList &listni, const QVariantMap &insettings);
+
+    bool applyNewNetworkSettings(const QStringList &listni, const QVariantMap &insettings, const QMap<QString,QString> &mapAboutTheCoordinator);
+
+    bool changeni(const QString &from, const QString &toni, const bool &sendatlb5);
+
+
+#endif
+
 signals:
 
 //    void onDaStateChanged(bool isdamodenow);
@@ -89,12 +108,37 @@ signals:
 
     void ndtFounNewDev(qint64 msec, QString devtype, QString sn, QString ni, bool wasRestored);
 
+#ifdef ENABLE_EMBEEMODEM_EXTENDED_OPERATIONS
+
+    void qrsStatus(qint64 msec, QStringList listniready, QStringList listniall,
+                   QString channelold, QString idold, QString keyold,
+                   QString channelnew, QString idnew, QString keynew,
+                   bool writeold, bool changeni, bool qrsmulticastmode, QVariantMap aboutcoordinator, QVariantMap insettings);
+
+#endif
+
 public slots:
 
 
 
 private:
+#ifdef ENABLE_EMBEEMODEM_EXTENDED_OPERATIONS
+    struct EmbeeNetworkParamsStr
+    {
+        QString chhex;
+        QString idhex;
+        QString key;
+        EmbeeNetworkParamsStr() {}
+        EmbeeNetworkParamsStr(const QString &chhex, const QString &idhex, const QString &key) : chhex(chhex), idhex(idhex), key(key.left(32)) {}
+    };
 
+    EmbeeNetworkParamsStr convert2netParams(const int &channel, const int &id, const QString &key);
+
+    EmbeeNetworkParamsStr convert2netParams(const QVariantMap &map, const QString &keysChIdKy);
+
+    EmbeeNetworkParamsStr convert2netParams(const QVariantMap &map, const QStringList &lkeysChIdKy);
+
+#endif
 
 
 //    bool enExtIface;
