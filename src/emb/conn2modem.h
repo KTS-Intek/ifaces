@@ -7,13 +7,17 @@
 #include <QTcpSocket>
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
+#ifndef DISABLE_SERIALPORT_MODE
 #include <QSerialPort>
-
-///[!] m2m-connector
-#include "src/m2m-service/svahaserviceconnector.h"
-
 ///[!] ifaces
 #include "checkcurrport.h"
+#endif
+
+#ifndef DISABLE_M2M_MODULE
+///[!] m2m-connector
+#include "src/m2m-service/svahaserviceconnector.h"
+#endif
+
 #endif
 
 
@@ -69,8 +73,16 @@ public:
 
     bool need2closeSerial;
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
+    bool ignoreUartsChecks;
+
+#ifndef DISABLE_M2M_MODULE
     SvahaServiceConnector *svahaConnector;
+#endif
+
+#ifndef DISABLE_SERIALPORT_MODE
     QSerialPort *serialPort;
+#endif
+
 #endif
 
     quint16 getConnectionDownCounter() const ;
@@ -121,14 +133,19 @@ public:
 
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
-    bool openM2mConnection(const QVariantHash &oneProfile);
 
+
+#ifndef DISABLE_M2M_MODULE
+    bool openM2mConnection(const QVariantHash &oneProfile);
+#endif
+
+#ifndef DISABLE_SERIALPORT_MODE
     bool openSerialPort(const QString &portName, const qint32 &baudRate, const QStringList &uarts);
 
     bool findModemOnPort(QString defPortName, qint32 baudR, QStringList uarts, QString &lastError);
 
     bool request2modemOn();
-
+#endif
 
 #endif
 
@@ -201,10 +218,14 @@ public slots:
     void resetDaState();
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
+
+    void setIgnoreUartChecks(bool ignore);
+
+#ifndef DISABLE_SERIALPORT_MODE
     void closeSerialPort();
 
     void closeSerialPortDirect();
-
+#endif
 #endif
 
 private slots:

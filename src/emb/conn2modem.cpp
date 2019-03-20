@@ -73,9 +73,17 @@ bool Conn2modem::isConnectionWorks()
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
     switch(lastConnectionType){
+
+#ifndef DISABLE_SERIALPORT_MODE
     case IFACECONNTYPE_UART     : if(need2closeSerial) closeSerialPort(); r = serialPort->isOpen(); break;
+#endif
+#ifndef DISABLE_TCPCLIENT_MODE
     case IFACECONNTYPE_TCPCLNT  : r = isTcpConnectionWorks(socket); break;
+#endif
+#ifndef DISABLE_M2M_MODULE
     case IFACECONNTYPE_M2MCLNT  : r = svahaConnector->isOpen(); break;
+#endif
+
     }
 
 #else
@@ -236,9 +244,15 @@ bool Conn2modem::waitForReadyRead(const int &msecs)
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
         switch(lastConnectionType){
+#ifndef DISABLE_SERIALPORT_MODE
         case IFACECONNTYPE_UART     : return serialPort->waitForReadyRead(msecs);
+#endif
+#ifndef DISABLE_TCPCLIENT_MODE
         case IFACECONNTYPE_TCPCLNT  : return socket->waitForReadyRead(msecs);
+#endif
+#ifndef DISABLE_M2M_MODULE
         case IFACECONNTYPE_M2MCLNT  : return svahaConnector->waitForReadyRead(msecs);
+#endif
         }
         return false ;
 
@@ -254,9 +268,15 @@ bool Conn2modem::waitForBytesWritten(const int &msecs)
 {
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
         switch(lastConnectionType){
+#ifndef DISABLE_SERIALPORT_MODE
         case IFACECONNTYPE_UART     : return serialPort->waitForBytesWritten(msecs);
+#endif
+#ifndef DISABLE_TCPCLIENT_MODE
         case IFACECONNTYPE_TCPCLNT  : return socket->waitForBytesWritten(msecs);
+#endif
+#ifndef DISABLE_M2M_MODULE
         case IFACECONNTYPE_M2MCLNT  : return svahaConnector->waitForBytesWritten(msecs);
+#endif
         }
         return false ;
 
@@ -277,9 +297,15 @@ QByteArray Conn2modem::readAll()
     emit onReadWriteOperation(true);
 
     switch(lastConnectionType){
+#ifndef DISABLE_SERIALPORT_MODE
     case IFACECONNTYPE_UART     : return serialPort->readAll();
+#endif
+#ifndef DISABLE_TCPCLIENT_MODE
     case IFACECONNTYPE_TCPCLNT  : return socket->readAll();
+#endif
+#ifndef DISABLE_M2M_MODULE
     case IFACECONNTYPE_M2MCLNT  : return svahaConnector->readAll();
+#endif
     }
     return "";
 
@@ -416,6 +442,7 @@ bool Conn2modem::openTcpConnection(const QString &host, const quint16 &port)
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
+#ifndef DISABLE_M2M_MODULE
 bool Conn2modem::openM2mConnection(const QVariantHash &oneProfile)
 {
     onDeviceDestr();//reset params
@@ -444,8 +471,11 @@ bool Conn2modem::openM2mConnection(const QVariantHash &oneProfile)
     return r;
 }
 
+#endif
+
 //-------------------------------------------------------------------------------------
 
+#ifndef DISABLE_SERIALPORT_MODE
 bool Conn2modem::openSerialPort(const QString &portName, const qint32 &baudRate, const QStringList &uarts)
 {
     onDeviceDestr();//reset params
@@ -494,6 +524,13 @@ bool Conn2modem::findModemOnPort(QString defPortName, qint32 baudR, QStringList 
                 serialPort->clear();
                 need2closeSerial = false;
                 emit onSerialPortOpened(portN);
+
+
+                if(ignoreUartsChecks){
+                    emit currentOperation(tr("UART checks are disabled"));
+                    return true;
+                }
+
                  const bool r = request2modemOn();
 
                 if(r)
@@ -514,7 +551,7 @@ bool Conn2modem::findModemOnPort(QString defPortName, qint32 baudR, QStringList 
 bool Conn2modem::request2modemOn()
 {
 
-    for(int i = 1; i <= 3 && !stopAll; i++){
+    for(int i = 1, j = 0; i <= 3 && !stopAll && j < 30; i++, j++){
         emit currentOperation(tr("Detecting the modem... Sending the AT command to %1.").arg(serialPort->portName()));
         writeATcommand("+++");
         const QByteArray readArr = readDeviceQuick("\r\n", false);
@@ -528,6 +565,8 @@ bool Conn2modem::request2modemOn()
     }
     return false;
 }
+#endif
+
 #endif
 
 //-------------------------------------------------------------------------------------
@@ -549,6 +588,9 @@ void Conn2modem::lSleep(const int &msleep)
 
 bool Conn2modem::checkUartAccess(const QByteArray &arr, const int &msecElapsed)
 {
+    if(lastConnectionType == IFACECONNTYPE_UART)
+        return false;//It is a direct connection
+
     if(verboseMode)
         qDebug() << "checkUartAccess " << arr.isEmpty() << msecElapsed << uartBlockPrtt << lastCommandWasAtcn << directAccess << arr.toHex();
     if(uartBlockPrtt && lastCommandWasAtcn && arr.isEmpty() && msecElapsed > 200){
@@ -604,11 +646,17 @@ bool Conn2modem::canCheckUartAccess(const bool &arrIsEmpty, const int &msecElaps
 bool Conn2modem::isCoordinatorFree()
 {
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
+
     if(lastConnectionType == IFACECONNTYPE_UART){
         directAccess = false;
         uartBlockPrtt = false;
 //        return true;
+
+
     }
+
+    if(ignoreUartsChecks)
+        return true;
 #endif
 
     const bool da = directAccess;
@@ -633,6 +681,8 @@ bool Conn2modem::isCoordinatorFree()
 
     }
 //    directAccess = uartBlockPrtt = false;//reset
+
+
 
     writeATcommand("ATCN", true);//у відповідь може бути нічого, тому важливо почати обмін з мінімальною затримкою
     if(readDeviceQuick("\r\n", false).contains("ERR") || uartBlockPrtt){
@@ -750,7 +800,7 @@ void Conn2modem::stopAllSlot()
 //-------------------------------------------------------------------------------------
 
 void Conn2modem::resetStopAllConfModem()
-{
+{//setNewTask4aDev
     stopAll = false;
 }
 
@@ -819,6 +869,14 @@ void Conn2modem::resetDaState()
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
+void Conn2modem::setIgnoreUartChecks(bool ignore)
+{
+    ignoreUartsChecks = ignore;
+}
+
+
+#ifndef DISABLE_SERIALPORT_MODE
+
 void Conn2modem::closeSerialPort()
 {
     serialPort->close();    
@@ -829,6 +887,7 @@ void Conn2modem::closeSerialPortDirect()
 {
     need2closeSerial = true;
 }
+#endif
 #endif
 
 //-------------------------------------------------------------------------------------
@@ -841,6 +900,7 @@ void Conn2modem::createDevices()
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
+    setIgnoreUartChecks(false);
     svahaConnector = new SvahaServiceConnector(this);
     connect(svahaConnector, SIGNAL(disconnected()), this, SIGNAL(onConnectionClosed()) );
 
@@ -872,7 +932,23 @@ void Conn2modem::onDeviceDestr()
         isCoordinatorConfigReady = false;
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
+
+
     lastConnectionType = 0xFF;
+#ifndef DISABLE_M2M_MODULE
+
+#else
+
+#ifndef DISABLE_SERIALPORT_MODE
+    lastConnectionType = IFACECONNTYPE_UART;
+#else
+    lastConnectionType = 0xFF;
+#endif
+
+#endif
+
+
+
 #else
     lastConnectionType = IFACECONNTYPE_TCPCLNT;//tcp client
 #endif
@@ -890,9 +966,15 @@ qint64 Conn2modem::write(const QByteArray &arr)
     emit onReadWriteOperation(false);
 
         switch(lastConnectionType){
+#ifndef DISABLE_SERIALPORT_MODE
         case IFACECONNTYPE_UART     : return serialPort->write(arr);
+#endif
+#ifndef DISABLE_TCPCLIENT_MODE
         case IFACECONNTYPE_TCPCLNT  : return socket->write(arr);
+#endif
+#ifndef DISABLE_M2M_MODULE
         case IFACECONNTYPE_M2MCLNT  : return svahaConnector->write(arr);
+#endif
         }
         return -1;
 
@@ -909,9 +991,15 @@ void Conn2modem::close()
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
         switch(lastConnectionType){
+#ifndef DISABLE_SERIALPORT_MODE
         case IFACECONNTYPE_UART     : return serialPort->close();
+#endif
+#ifndef DISABLE_TCPCLIENT_MODE
         case IFACECONNTYPE_TCPCLNT  : return socket->close();
+#endif
+#ifndef DISABLE_M2M_MODULE
         case IFACECONNTYPE_M2MCLNT  : return svahaConnector->close();
+#endif
         }
         return;
 

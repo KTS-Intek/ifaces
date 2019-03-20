@@ -21,20 +21,39 @@ bool Conf2modem::openAconnection(const ZbyrConnSett &connSett, QString &connline
 {
     bool r = false;
     switch(connSett.connectionType){
+#ifndef DISABLE_TCPCLIENT_MODE
     case IFACECONNTYPE_TCPCLNT: r = openTcpConnection(connSett.prdvtrAddr, connSett.prdvtrPort); break;
+#endif
+
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
+
+#ifndef DISABLE_M2M_MODULE
     case IFACECONNTYPE_M2MCLNT : r = openM2mConnection(connSett.m2mhash); break;
+#endif
+
+#ifndef DISABLE_SERIALPORT_MODE
     case IFACECONNTYPE_UART : r = openSerialPort(connSett.prdvtrAddr, connSett.prdvtrPort, connSett.uarts); break;
 #endif
+
+#endif
+
+
     }
 
     if(r){
 
         switch(connSett.connectionType){
+#ifndef DISABLE_TCPCLIENT_MODE
         case IFACECONNTYPE_TCPCLNT: connline = QString("%1\n%2").arg(connSett.prdvtrAddr).arg(connSett.prdvtrPort); break;
+#endif
+
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
+#ifndef DISABLE_M2M_MODULE
         case IFACECONNTYPE_M2MCLNT: connline = ConvertAtype::varHash2str(connSett.m2mhash); break;
+#endif
+#ifndef DISABLE_SERIALPORT_MODE
         case IFACECONNTYPE_UART : connline = QString("%1\n%2").arg(connSett.prdvtrAddr).arg(connSett.prdvtrPort); break;
+#endif
 #endif
         }
     }
@@ -217,7 +236,7 @@ bool Conf2modem::readAboutModem(QVariantMap &atcommands, QString &errStr)
 
 //-------------------------------------------------------------------------------------
 
-bool Conf2modem::nodeDiscovery(const int &modemsLimit, const bool &hardRecovery, int &modemReady, QVariantMap &ndtParams, QString &errStr)
+bool Conf2modem::nodeDiscovery(const int &totalModemCount, const qint64 &totalMsecElapsed, const qint64 &totalMsecLimt, const bool &hardRecovery, int &modemReady, QStringList &listreadynis, QVariantMap &ndtParams, QString &errStr)
 {
 
     const QString opername = tr("Node discovery");
@@ -226,11 +245,26 @@ bool Conf2modem::nodeDiscovery(const int &modemsLimit, const bool &hardRecovery,
         const QMap<QString,QString> map = getTheModemInfo("ATAD", false, false, opername, errStr);
         if(map.isEmpty())
             return false;
-
         if(modemIsOverRS485){
             errStr = tr("Node Discovery Tool doesn't support RS485");
+#ifdef ENABLE_EXTSUPPORT_OF_IFACES
+
+#ifdef ISNATIVEIFACE
+            //WTF???
+                  modemIsOverRS485 = false;
+                  return false;
+#else
+
             return true;//the end
+#endif
+
+#else
+      //WTF???
+            modemIsOverRS485 = false;
+            return false;
+#endif
         }
+
 
         if(map.value("ATAD").toUpper() != "C"){
             errStr = tr("The modem is not a coordinator");
@@ -262,18 +296,20 @@ bool Conf2modem::nodeDiscovery(const int &modemsLimit, const bool &hardRecovery,
     }
 
 
-    const int timeout = 3 * 60 * 1000;// 155000;
+    const qint64 timeout = 3 * 60 * 1000;// 155000;
     QTime time;
     time.start();
 
     bool wasInCommandMode = false;
     QString readstr;
 
-    const int modemMaximum = (modemsLimit < 1) ? 0xFFFF : modemsLimit;
+    const int modemMaximum = (totalModemCount < 1) ? 0xFFFF : totalModemCount;
 
-    QStringList listreadynis = ndtParams.value("listreadynis").toStringList();
+    qint64 timeelapsed = time.elapsed();
 
-    for(int i = 0; !stopAll && isConnectionWorks() && i < 0xFFFFFFF && time.elapsed() < timeout && modemReady < modemMaximum; i++){
+    bool sayGoodByCoordinator = false;
+
+    for(int i = 0; !stopAll && isConnectionWorks() && i < 0xFFFFFFF && timeelapsed < timeout && modemReady < modemMaximum; i++){
 
         if(!wasInCommandMode){
             if(!enterCommandMode(opername))
@@ -293,9 +329,13 @@ bool Conf2modem::nodeDiscovery(const int &modemsLimit, const bool &hardRecovery,
             if(need2reenterTheCommandMode)
                 wasInCommandMode = false;
         }
+        timeelapsed = time.elapsed();
+        if((totalMsecElapsed + timeelapsed) >= totalMsecLimt){
+            sayGoodByCoordinator = true;
+            break;
+        }
     }
 
-    ndtParams.insert("listreadynis", listreadynis);
 
     if(stopAll){
         writeATcommand("ATCN");
@@ -303,12 +343,27 @@ bool Conf2modem::nodeDiscovery(const int &modemsLimit, const bool &hardRecovery,
         return true;
     }
 
-    if(modemReady >= modemMaximum){
+    if(modemReady >= modemMaximum)
+        sayGoodByCoordinator = true;
+
+
+    if(sayGoodByCoordinator){
         QStringList writecommands;
+
+#ifdef ENABLE_EXTSUPPORT_OF_IFACES        
+#ifdef ISNATIVEIFACE
+        writecommands.append("ATC2 0");//I need at least one item in the list
+
+#else
         if(ndtParams.value("intATSM") == "1"){
             writecommands.append("ATSM1");
             writecommands.append("ATWR");
         }
+#endif
+
+#else
+        writecommands.append("ATC2 0");//I need at least one item in the list
+#endif
         return writeSomeCommand(writecommands, false, true, true, opername, errStr);
     }
 
@@ -762,9 +817,12 @@ bool Conf2modem::isCoordinatorGood(const bool &forced, const bool &readAboutZigB
 {
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
-
+#ifndef ISNATIVEIFACE
     isCoordinatorConfigReady = (isCoordinatorConfigReady || !forced);
 #endif
+#endif
+
+
     if(!forced && isCoordinatorConfigReady && qAbs(msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) < MAX_MSEC_FOR_COORDINATOR_READY )
         return isCoordinatorConfigReady;
 
@@ -956,6 +1014,8 @@ bool Conf2modem::decodeNtdOneLine(const QString &line, const qint64 &msec, const
     const QString sn = line.mid(2,16);
     const QString ni = line.mid(19);
 
+    emit ndtFounADev(msec, typeDev, sn, ni, wasRestored);// brokenStts.contains(line));
+
     if(listreadynis.contains(ni))
         return false;
     listreadynis.append(ni);
@@ -1035,6 +1095,17 @@ bool Conf2modem::quickRadioSetupExt(const QVariantMap &insettings, QString &errs
 
 bool Conf2modem::isCoordinatorReady4quickRadioSetupExt(const QVariantMap &insettings, QMap<QString, QString> &mapAboutTheModem, QString &errstr)
 {
+    if(insettings.value("ignoreCoordinatorSett").toBool()){
+        const QStringList lcommands = QString("ATVR ATHV ATSL ATSH ATAD ATAP ATSM ATCP0 ATCH ATID ATMD").split(" ");
+        for(int i = 0, imax = lcommands.size(); i < imax; i++){
+            if(mapAboutTheModem.contains(lcommands.at(i)))
+                continue;
+            mapAboutTheModem.insert(lcommands.at(i), "?");
+        }
+        return true;
+
+    }
+
     bool modemtocoordiantor = false;
 
     const bool hasMulticastMessages = (insettings.value("qrsmulticastmode").toBool() || insettings.value("changeni").toBool());
@@ -1222,7 +1293,7 @@ bool Conf2modem::applyNewNetworkSettings(const QStringList &listni, const QVaria
     emit qrsStatus(QDateTime::currentMSecsSinceEpoch(), parameterssended ? listni : QStringList(), insettings.value("listni").toString().split(" "),
                    netparamsold.chhex, netparamsold.idhex, netparamsold.key,
                    netparamsnew.chhex, netparamsnew.idhex, netparamsnew.key,
-                   insettings.value("writeold").toBool(), insettings.value("changeni").toBool(), insettings.value("qrsmulticastmode").toBool(), aboutcoordinator, insettings );
+                   insettings.value("writeold").toBool(), insettings.value("changeni").toBool(), insettings.value("qrsmulticastmode").toBool(), insettings.value("ignoreCoordinatorSett").toBool(), aboutcoordinator, insettings );
 
 
 //    void qrsStatus(qint64 msec, QStringList listniready, QStringList listniall,
@@ -1304,6 +1375,12 @@ bool Conf2modem::changeni(const QString &from, const QString &toni, const bool &
     return stopAll;
 }
 
+#endif
+//-------------------------------------------------------------------------------------
+
+
+#ifdef ENABLE_EMBEEMODEM_EXTENDED_OPERATIONS
+
 //-------------------------------------------------------------------------------------
 
 Conf2modem::EmbeeNetworkParamsStr Conf2modem::convert2netParams(const int &channel, const int &id, const QString &key)
@@ -1326,6 +1403,5 @@ Conf2modem::EmbeeNetworkParamsStr Conf2modem::convert2netParams(const QVariantMa
 
 #endif
 
-//-------------------------------------------------------------------------------------
 
 

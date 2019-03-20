@@ -8,7 +8,7 @@
 
 void IfaceExchangeSerializedTypes::makeRegistration()
 {
-    //call this function once, before using this types
+    //call this function once, before using these types
     if(!QMetaType::isRegistered(QMetaType::type("ZbyrConnSett"))){
         qRegisterMetaTypeStreamOperators<ZbyrConnSett>("ZbyrConnSett");
 

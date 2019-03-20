@@ -5,6 +5,7 @@
 
 ///[!] ifaces
 #include "src/emb/ifaceexchangeserializedtypes.h"
+#include "src/emb/embnodediscoveryconverter.h"
 
 
 //class Conf2modem : public QObject
@@ -12,15 +13,7 @@
 
 //#include "conf2modem_global.h"
 
-struct OneEmbeeModemSmpl
-{
-    QString typestr;
-    QString eui64;
-    QString ni;
-    bool wasRestored;
-    qint64 lastmsec;
-    OneEmbeeModemSmpl() {}
-};
+
 
 class Conf2modem : public Conn2modem
 {
@@ -43,7 +36,7 @@ public:
 
     bool readAboutModem(QVariantMap &atcommands, QString &errStr);
 
-    bool nodeDiscovery(const int &modemsLimit, const bool &hardRecovery, int &modemReady, QVariantMap &ndtParams, QString &errStr);
+    bool nodeDiscovery(const int &totalModemCount, const qint64 &totalMsecElapsed, const qint64 &totalMsecLimt, const bool &hardRecovery, int &modemReady, QStringList &listreadynis, QVariantMap &ndtParams, QString &errStr);
 
 
     bool writeCommands2aModem(const QStringList &lcommands, QString &errStr);
@@ -94,6 +87,7 @@ public:
 
 #endif
 
+
 signals:
 
 //    void onDaStateChanged(bool isdamodenow);
@@ -106,18 +100,21 @@ signals:
 
     void atCommandRez(QString atcommand, QString rez);
 
-    void ndtFounNewDev(qint64 msec, QString devtype, QString sn, QString ni, bool wasRestored);
+    void ndtFounNewDev(qint64 msec, QString devtype, QString sn, QString ni, bool wasRestored);//only for new devices
+    void ndtFounADev(qint64 msec, QString devtype, QString sn, QString ni, bool wasRestored);//for all devices, but they must be routers
 
 #ifdef ENABLE_EMBEEMODEM_EXTENDED_OPERATIONS
 
     void qrsStatus(qint64 msec, QStringList listniready, QStringList listniall,
                    QString channelold, QString idold, QString keyold,
                    QString channelnew, QString idnew, QString keynew,
-                   bool writeold, bool changeni, bool qrsmulticastmode, QVariantMap aboutcoordinator, QVariantMap insettings);
+                   bool writeold, bool changeni, bool qrsmulticastmode, bool ignoreCoordinatorSett, QVariantMap aboutcoordinator, QVariantMap insettings);
 
 #endif
 
 public slots:
+
+
 
 
 

@@ -9,10 +9,8 @@
 #include "src/emb/conf2modem.h"
 
 
-#define IFACE_CLOSE_AFTER   180
-#define MAX_MESS_COUNT_PER_ONE_TASK     1000
-#define MAX_IDENTICAL_MESS_PER_SESION   55//SETT_MAX_IDENTICAL_MESS_PER_SESION
-#define MAX_DIFF_MSEC_FOR_TASK_SESION   1500000  //25 MINUTES
+#include "ifaceexchangetypesdefs.h"
+
 
 
 struct PollObjectState
