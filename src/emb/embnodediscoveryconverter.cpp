@@ -13,7 +13,7 @@ QString EmbNodeDiscoveryConverter::getSettError(const AtndOneModeSettStruct &set
 
 
     if(sett.minnilen > sett.maxnilen)
-        errs.append(QObject::tr("The minimum NI length can't be less than the maximum NI length"));
+        errs.append(QObject::tr("The minimum NI length can't be more than the maximum NI length"));
 
     if(!sett.pattern.isEmpty()){
         QRegularExpression r(sett.pattern);

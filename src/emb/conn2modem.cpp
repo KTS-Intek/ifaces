@@ -886,6 +886,7 @@ void Conn2modem::closeSerialPort()
 void Conn2modem::closeSerialPortDirect()
 {
     need2closeSerial = true;
+    emit need2closeSerialPort();
 }
 #endif
 #endif

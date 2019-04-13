@@ -77,15 +77,18 @@ struct PollSavedSettings
     bool checkPowerSleepProfile;
     int go2sleepPowerSleepProfile;//seconds
 
+    bool enableDatabaseLoggin;
+
     PollSavedSettings() : meterRetryMax(1), meterRetryMaxFA(1), zatrymkaDoZapuskuSek(30), hardAddrsn(false), enableW4E(true), corDTallow(false),
-        messCountBeforeReady(1), messCountAfter(100), corDTintrvl(300), useForwardTable(false), autoAdd2forwardTable(true), checkPowerSleepProfile(true), go2sleepPowerSleepProfile(30)  {}
+        messCountBeforeReady(1), messCountAfter(100), corDTintrvl(300), useForwardTable(false), autoAdd2forwardTable(true), checkPowerSleepProfile(true),
+        go2sleepPowerSleepProfile(30), enableDatabaseLoggin(false)  {}
 
     PollSavedSettings(const quint16 &meterRetryMax, const quint16 &meterRetryMaxFA, const qint32 &zatrymkaDoZapuskuSek, const bool &hardAddrsn, const bool &enableW4E, const bool &corDTallow,
                       const qint32 &messCountBeforeReady, const qint32 &messCountAfter, const qint32 &corDTintrvl, const bool &useForwardTable, const bool &autoAdd2forwardTable,
-                      const bool &checkPowerSleepProfile, const int &go2sleepPowerSleepProfile)
+                      const bool &checkPowerSleepProfile, const int &go2sleepPowerSleepProfile, const bool &enableDatabaseLoggin)
         : meterRetryMax(meterRetryMax), meterRetryMaxFA(meterRetryMaxFA), zatrymkaDoZapuskuSek(zatrymkaDoZapuskuSek), hardAddrsn(hardAddrsn), enableW4E(enableW4E), corDTallow(corDTallow),
         messCountBeforeReady(messCountBeforeReady), messCountAfter(messCountAfter), corDTintrvl(corDTintrvl), useForwardTable(useForwardTable), autoAdd2forwardTable(autoAdd2forwardTable),
-        checkPowerSleepProfile(checkPowerSleepProfile), go2sleepPowerSleepProfile(go2sleepPowerSleepProfile) {}
+        checkPowerSleepProfile(checkPowerSleepProfile), go2sleepPowerSleepProfile(go2sleepPowerSleepProfile), enableDatabaseLoggin(enableDatabaseLoggin) {}
 
 };
 
@@ -94,6 +97,8 @@ struct ExchangeWithOneModemStat
 {
     QDateTime startPollDate;//
 
+    QStringList listWriteReadHistory;
+    QTime time4taskProcessing;//it counts  processing time for one task from the beggining to the end
 
     quint32 byte2meter;
     quint32 bytesFromMeter;

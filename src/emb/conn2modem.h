@@ -199,6 +199,8 @@ signals:
     void onSerialPortOpened(QString portName);
     void stopCheckCurrPort();
 
+    void need2closeSerialPort();
+
 public slots:
     void setWritePreffix(QByteArray preffix);
 
