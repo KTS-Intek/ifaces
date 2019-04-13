@@ -48,6 +48,33 @@ void SvahaSocket::setDoAfterConn(const int &command, const QVariantHash &s_data)
     hashMemoWrite.clear();
     hashMemoWrite.insert(command, s_data);
 }
+
+//------------------------------------------------------------------------------------------
+
+QString SvahaSocket::getErrMess(const int &code, const QString &commandName)
+{
+    QString mess;
+    switch(code){
+    case ERR_DATABASE_CLOSED    : mess = tr("Command: %1. Database is not opened.").arg(commandName); break;
+    case ERR_INCORRECT_REQUEST  : mess = tr("Command: %1. Incorrect request.").arg(commandName); break;
+    case ERR_INTERNAL_ERROR     : mess = tr("Command: %1. Internal error.").arg(commandName); break;
+    case ERR_NO_DATA            : mess = tr("Command: %1. Data is not found.").arg(commandName); break;
+
+    case ERR_MAX_TABLE_COUNT    : mess = tr("Command: %1. The table count limit was reached").arg(commandName); break;
+    case ERR_CORRUPTED_DATA     : mess = tr("Command: %1. Data is corrupted").arg(commandName); break;
+    case ERR_DUPLICATE_NI       : mess = tr("Command: %1. Duplicating NI").arg(commandName); break;
+    case ERR_DUPLICATE_SN       : mess = tr("Command: %1. Duplicating S/N").arg(commandName); break;
+    case ERR_DATE_NOT_VALID     : mess = tr("Command: %1. Date is invalid").arg(commandName); break;
+    case ERR_COMMAND_NOT_ALLOWED: mess = tr("Command: %1. Command is not allowed").arg(commandName); break;
+    case ERR_ACCESS_DENIED      : mess = tr("Command: %1. Access error").arg(commandName); break;
+    case ERR_RESOURCE_BUSY      : mess = tr("Command: %1. Resource is busy").arg(commandName); break;
+    case ERR_DA_CLOSED          : mess = tr("Direct access was close");  break;
+    case ERR_NO_ERROR           : mess = tr("Command: %1. Done)").arg(commandName); break;
+    default: mess = tr("Command: %1. Unknown error. Error code: %2").arg(commandName).arg(code); break;
+    }
+    return mess;
+
+}
 //------------------------------------------------------------------------------------------
 void SvahaSocket::startConnection()
 {
@@ -758,33 +785,9 @@ int SvahaSocket::onCOMMAND_ERROR_CODE(const QVariantHash &h, bool &rezIsGood)
     if(!rezIsGood)
         return MESS_CORRUPTED_DATA;
 
-    QString commandName;// = ShowMessHelperCore::name4command(h.value("lcmd").toInt());
-    if(commandName.isEmpty())
-        commandName = QString::number(h.value("lcmd").toInt());
+//    QString commandName;// = ShowMessHelperCore::name4command(h.value("lcmd").toInt());
 
-    QString mess;
-    switch(h.value("e").toInt()){
-    case ERR_DATABASE_CLOSED: mess = tr("Command: %1. Database is not opened.").arg(commandName); break;
-    case ERR_INCORRECT_REQUEST: mess = tr("Command: %1. Incorrect request.").arg(commandName); break;
-    case ERR_INTERNAL_ERROR: mess = tr("Command: %1. Internal error.").arg(commandName); break;
-    case ERR_NO_DATA: mess = tr("Command: %1. Data is not found.").arg(commandName); break;
-
-
-
-    case ERR_MAX_TABLE_COUNT : mess = tr("Command: %1. Table count limit").arg(commandName); break;
-    case ERR_CORRUPTED_DATA : mess = tr("Command: %1. Data is corrupted").arg(commandName); break;
-    case ERR_DUPLICATE_NI : mess = tr("Command: %1. Duplicating NI").arg(commandName); break;
-    case ERR_DUPLICATE_SN : mess = tr("Command: %1. Duplicating S/N").arg(commandName); break;
-    case ERR_DATE_NOT_VALID : mess = tr("Command: %1. Date is invalid").arg(commandName); break;
-    case ERR_COMMAND_NOT_ALLOWED : mess = tr("Command: %1. Command is not allowed").arg(commandName); break;
-    case ERR_ACCESS_DENIED : mess = tr("Command: %1. Command is not allowed").arg(commandName); break;
-    case ERR_RESOURCE_BUSY : mess = tr("Command: %1. Command is not allowed").arg(commandName); break;
-    case ERR_DA_CLOSED : mess = tr("Direct access was close");  break;
-
-
-    case ERR_NO_ERROR : mess = tr("Command: %1. Done)").arg(commandName); break;
-    default: mess = tr("Command: %1. Unknown error. Error code: %2").arg(commandName).arg(h.value("e").toInt()); break;
-    }
+    const QString mess = getErrMess(h.value("e").toInt(), QString::number(h.value("lcmd").toInt()));
 
     if(h.value("lcmd").toInt() == COMMAND_WRITE_DA_OPEN_CLOSE){
         if(h.value("e").toInt() == ERR_NO_ERROR){
@@ -819,34 +822,9 @@ int SvahaSocket::onCOMMAND_ERROR_CODE_EXT(const QVariantHash &h, bool &rezIsGood
     if(!rezIsGood)
         return MESS_CORRUPTED_DATA;
 
-    QString commandName ;//= ShowMessHelperCore::name4command(h.value("lcmd").toInt());
-    if(commandName.isEmpty())
-        commandName = QString::number(h.value("lcmd").toInt());
-
     bool addRedLine = true;
-    QString mess;
-    switch(h.value("e").toInt()){
-    case ERR_DATABASE_CLOSED: mess = tr("Command: %1. Database is not opened.").arg(commandName); break;
-    case ERR_INCORRECT_REQUEST: mess = tr("Command: %1. Incorrect request.").arg(commandName); break;
-    case ERR_INTERNAL_ERROR: mess = tr("Command: %1. Internal error.").arg(commandName); break;
-    case ERR_NO_DATA: mess = tr("Command: %1. Data is not found.").arg(commandName); break;
 
-
-
-    case ERR_MAX_TABLE_COUNT : mess = tr("Command: %1. Table count limit").arg(commandName); break;
-    case ERR_CORRUPTED_DATA : mess = tr("Command: %1. Corrupted data").arg(commandName); break;
-    case ERR_DUPLICATE_NI : mess = tr("Command: %1. Duplicating NI").arg(commandName); break;
-    case ERR_DUPLICATE_SN : mess = tr("Command: %1. Duplicating S/N").arg(commandName); break;
-    case ERR_DATE_NOT_VALID : mess = tr("Command: %1. Date is not valid").arg(commandName); break;
-    case ERR_COMMAND_NOT_ALLOWED : mess = tr("Command: %1. Command is not allowed").arg(commandName); break;
-    case ERR_ACCESS_DENIED : mess = tr("Command: %1. Command is not allowed").arg(commandName); break;
-    case ERR_RESOURCE_BUSY : mess = tr("Command: %1. Resource was busy").arg(commandName);  break;
-    case ERR_DA_CLOSED : mess = tr("Direct access was close");  break;
-
-
-    case ERR_NO_ERROR : addRedLine = false; mess = tr("Command: %1. Done)").arg(commandName); break;
-    default: mess = tr("Command: %1. Unknown error. Error code: %2").arg(commandName).arg(h.value("e").toInt()); break;
-    }
+    QString mess = getErrMess(h.value("e").toInt(), QString::number(h.value("lcmd").toInt()));
 
     if(h.value("lcmd").toInt() == COMMAND_WRITE_DA_OPEN_CLOSE){
         if(h.value("e").toInt() == ERR_NO_ERROR){
@@ -1043,7 +1021,7 @@ int SvahaSocket::onCOMMAND_WRITE_METER_LIST_FRAMED(const QVariantHash &h, bool &
 int SvahaSocket::onCOMMAND_READ_LEDLAMPLIST_FRAMED(const QVariantHash &h, bool &rezIsGood)
 {
     //Model,NI,Group,Last Exchange,Power,Start Power,NA Power,Tna,Coordinate,Poll On/Off,Street,Memo
-    return readFramedList(h, rezIsGood, key2header.value("getColNamesLedLamp"), key2header.value("getKeysLedLampWriteOnly"), // TableHeaders::getColNamesLedLamp(), FireflyGlobal::getKeysLedLampWriteOnly(),
+    return readFramedList(h, rezIsGood, key2header.value("getColNamesLedLamp"), key2header.value("getKeysLedLampWriteOnly"), // TableHeaders::getColNamesLedLampV2(), FireflyGlobal::getKeysLedLampWriteOnly(),
                           COMMAND_READ_LEDLAMPLIST_FRAMED, tr("lamps"));
 
 }

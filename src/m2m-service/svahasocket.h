@@ -17,6 +17,9 @@ public:
 
 
     void setDoAfterConn(const int &command, const QVariantHash &s_data);
+
+    static QString getErrMess(const int &code, const QString &commandName);
+
 signals:
 
 

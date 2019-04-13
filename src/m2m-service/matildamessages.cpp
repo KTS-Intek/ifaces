@@ -12,10 +12,10 @@ QString MatildaMessages::messFromCode(const int &messCode)
 {
     QString mess;
     switch(messCode){
-    case MESS_NO_TABLE: mess = tr("No table for this period("); break;
+    case MESS_NO_TABLE: mess = tr("There is no table for this period("); break;
     case MESS_CORRUPTED_DATA: mess = tr("Corrupted data("); break;
     case MESS_CORRUPTED_PACKET: mess = tr("Corrupted packet("); break;
-    case MESS_NO_ANSWER_FROM_DEVICE: mess = tr("No answer from the device("); break;
+    case MESS_NO_ANSWER_FROM_DEVICE: mess = tr("There is no answer from the device("); break;
     case MESS_NO_DATA: mess = tr("Data is not found("); break;
     case MESS_OPERATION_ABORTED: mess = tr("Operation aborted"); break;
     case MESS_CANT_CONNECT2DEV: mess = tr("Can't connect to the device("); break;
