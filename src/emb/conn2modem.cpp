@@ -355,9 +355,17 @@ qint64 Conn2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAnd
     if(verboseMode)
         qDebug() << "ZbyratorObject::write2dev " << directAccess << writeArr.isEmpty() << writePreffix << uartBlockPrtt;
 
-    if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem write2dev directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, writeArr=%4, lastConnectionType=%5").arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(QString(writeArr.toHex()) + " " + QString(writeArr).simplified().trimmed()).arg((int)lastConnectionType));
+    const bool isConnOk = isConnectionWorks();
 
-    if(!isConnectionWorks())
+    if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem write2dev directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, writeArr=%4, lastConnectionType=%5, isConnOk=%6")
+                                                 .arg(directAccess)
+                                                 .arg(uartBlockPrtt)
+                                                 .arg(QString(writePreffix))
+                                                 .arg(QString(writeArr.toHex()) + " " + QString(writeArr).simplified().trimmed())
+                                                 .arg((int)lastConnectionType)
+                                                 .arg(int(isConnOk)));
+
+    if(!isConnOk)
         return 0;
 
     emit dataReadWriteReal(writeArr, ifaceName, false);
