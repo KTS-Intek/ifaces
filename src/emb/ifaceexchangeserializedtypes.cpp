@@ -15,6 +15,11 @@ void IfaceExchangeSerializedTypes::makeRegistration()
 
 
     }
+
+    if(!QMetaType::isRegistered(QMetaType::type("QHash<QString,QString>"))){
+        const int id = qRegisterMetaType<QHash<QString,QString> >("QHash<QString,QString>");
+        qDebug() << "TheLordOfBusV2 try registering QHash<QString,QString> id=" << id;
+    }
 }
 
 ZbyrConnSett IfaceExchangeSerializedTypes::getZbyrConnSettFromArgs(const QStringList &list, bool &ok)

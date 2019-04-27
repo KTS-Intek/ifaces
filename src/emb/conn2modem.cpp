@@ -214,8 +214,8 @@ QByteArray Conn2modem::readDeviceQuick(const QByteArray &endSymb, const bool &is
 {
     const DeviceTimeouts timeoutsl = this->timeouts;
 
-    timeouts.global = isclearbufmode ? 60 : 250;
-    timeouts.block = isclearbufmode ? 20 : 50;
+    timeouts.global = isclearbufmode ? 60 : 300;
+    timeouts.block = isclearbufmode ? 20 : 100;
 
 #ifdef DISABLE_QUICK_READMODE
      if(!isclearbufmode){
@@ -519,6 +519,7 @@ bool Conn2modem::findModemOnPort(QString defPortName, qint32 baudR, QStringList 
         uarts.prepend(defPortName);
     }
 
+    QString lastuarterr;
     while(!uarts.isEmpty()){
         const QString portN = uarts.takeFirst();
 
@@ -546,11 +547,15 @@ bool Conn2modem::findModemOnPort(QString defPortName, qint32 baudR, QStringList 
 
                 emit stopCheckCurrPort();
 
-            }
+            }else
+                lastuarterr = serialPort->errorString();
         }
+        lastuarterr = serialPort->errorString();
         serialPort->close();
     }
-    lastError = tr("Can't find any device");
+
+
+    lastError = lastError.isEmpty() ? tr("Can't find any device") : lastError;
     return false;
 }
 
