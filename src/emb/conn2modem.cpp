@@ -877,11 +877,16 @@ void Conn2modem::resetDaState()
 {
     directAccess = false;
 }
-
 //-------------------------------------------------------------------------------------
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
+void Conn2modem::simpleClose()
+{
+    close();
+}
+
+//-------------------------------------------------------------------------------------
 void Conn2modem::setIgnoreUartChecks(bool ignore)
 {
     ignoreUartsChecks = ignore;

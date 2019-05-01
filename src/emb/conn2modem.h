@@ -220,6 +220,7 @@ public slots:
     void resetDaState();
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
+    void simpleClose();
 
     void setIgnoreUartChecks(bool ignore);
 
@@ -234,6 +235,8 @@ private slots:
     void createDevices();
 
     void onDeviceDestr();
+
+
 
 private:
     qint64 write(const QByteArray &arr);
