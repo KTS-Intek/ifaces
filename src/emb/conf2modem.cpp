@@ -16,6 +16,60 @@ Conf2modem::Conf2modem(const int &dbgExtSrcId, const bool &verboseMode, QObject 
 
 
 }
+
+Conf2modem::RezUpdateConnSettings Conf2modem::convertFromVarMap(const QVariantMap &interfaceSettings)
+{
+    ZbyrConnSett connSett;
+    return convertFromVarMapExt(interfaceSettings, connSett);
+}
+
+Conf2modem::RezUpdateConnSettings Conf2modem::convertFromVarMapExt(const QVariantMap &interfaceSettings, ZbyrConnSett connSett)
+{
+    connSett.connectionType = interfaceSettings.value("ifaceMode").toInt();
+    switch(connSett.connectionType){
+
+    case IFACECONNTYPE_TCPCLNT:{
+        connSett.prdvtrAddr = interfaceSettings.value("hostName", "::1").toString();
+        connSett.prdvtrPort = interfaceSettings.value("port", 8989).toUInt();
+        break;}
+
+    case IFACECONNTYPE_M2MCLNT:{
+        connSett.m2mhash = interfaceSettings.value("m2mProfile").toHash();
+        break;}
+
+    case IFACECONNTYPE_UART:{
+        connSett.uarts = interfaceSettings.value("uarts").toStringList();
+        connSett.prdvtrAddr = interfaceSettings.value("uart").toString();
+        connSett.prdvtrPort = interfaceSettings.value("baudRate").toInt();
+        break;}
+
+    }
+    QString ifaceParams;
+    switch(connSett.connectionType){
+
+    case IFACECONNTYPE_TCPCLNT :{
+        ifaceParams = QString("%1\n%2").arg(connSett.prdvtrAddr).arg(connSett.prdvtrPort);
+        break;}
+
+    case IFACECONNTYPE_M2MCLNT :{
+        QList<QString> lk = connSett.m2mhash.keys();
+        lk.removeOne("t");//timeout
+        std::sort(lk.begin(), lk.end());
+        for(int i = 0, imax = lk.size(); i < imax; i++)
+            ifaceParams.append(QString("%1\n%2\n\r\n").arg(lk.at(i)).arg(connSett.m2mhash.value(lk.at(i)).toString()));
+        break;}
+
+    default :{
+        ifaceParams = QString("%1\n\n\n%2\n%3").arg(connSett.uarts.join("\r")).arg(connSett.prdvtrAddr).arg(connSett.prdvtrPort);
+        break;}
+
+    }
+    connSett.timeOutG = interfaceSettings.value("timeoutMsec", 11000).toInt();
+    connSett.timeOutB = interfaceSettings.value("blockTimeout", 300).toInt();
+
+
+    return Conf2modem::RezUpdateConnSettings(connSett, ifaceParams);
+}
 //-------------------------------------------------------------------------------------
 bool Conf2modem::openAconnection(const ZbyrConnSett &connSett, QString &connline)
 {
@@ -160,6 +214,7 @@ bool Conf2modem::enterCommandMode()
 
 bool Conf2modem::networkReset(QString &errStr)
 {
+//    bool writeSomeCommand(const QStringList &list2write, const bool &enterTheCommandMode, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr);
 
    return writeSomeCommand(QString("ATNR 5").split("\t"), true, false, false, tr("Network reset"), errStr);
 
@@ -782,7 +837,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                 QTime time;
                 time.start();
                 QByteArray readArr = readDevice().toUpper();
-                while(time.elapsed() < 11000 && readArr == "OK\r\nOK\r\n" && !stopAll)
+                while(time.elapsed() < 11000 && readArr != "OK\r\n" && !stopAll)
                     readArr.append(readDevice().toUpper());
 
                 if(!readArr.contains("OK\r\n")){

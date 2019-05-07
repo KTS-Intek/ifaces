@@ -4,7 +4,10 @@
 #include <QObject>
 #include <QIODevice>
 #include <QStringList>
+
+#ifndef DISABLE_TCPCLIENT_MODE
 #include <QTcpSocket>
+#endif
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 #ifndef DISABLE_SERIALPORT_MODE
@@ -69,7 +72,9 @@ public:
 
     bool modemIsOverRS485;
 
+#ifndef DISABLE_TCPCLIENT_MODE
     QTcpSocket *socket;
+#endif
 
     bool need2closeSerial;
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
@@ -102,9 +107,10 @@ public:
     bool isConnectionWorks();
 
     bool isConnectionWorks(int waitMsec);
+#ifndef DISABLE_TCPCLIENT_MODE
 
     bool isTcpConnectionWorks(QTcpSocket *socket);
-
+#endif
     QByteArray readDevice();
 
     QByteArray readDevice(const QByteArray &endSymb, const bool &isQuickMode);
@@ -125,11 +131,12 @@ public:
 
     qint64 write2dev(const QByteArray &writeArr, const bool &ignoreDaAndPrtt);
 
+#ifndef DISABLE_TCPCLIENT_MODE
 
     bool openTcpConnection(const QStringList &hosts, const QList<quint16> &ports);
 
     bool openTcpConnection(const QString &host, const quint16 &port);
-
+#endif
 
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
@@ -192,7 +199,7 @@ signals:
     void killPeredavatorRequest();
     void resetCoordinatorRequest();//hardware
 
-    void onConnectionClosed();
+    void onConnectionClosed();//Connection was closed by not this object
 
     void onConnectionDown();
 
@@ -200,6 +207,15 @@ signals:
     void stopCheckCurrPort();
 
     void need2closeSerialPort();
+
+
+    void bigReadData(qint64 len);//readArr.length() > MAX_READ_FROM_UART
+
+    void readyRead();
+
+
+    void detectedDisconnectedSerialPort();
+
 
 public slots:
     void setWritePreffix(QByteArray preffix);
@@ -230,6 +246,10 @@ public slots:
     void closeSerialPortDirect();
 #endif
 #endif
+
+    void activateAsyncMode();
+
+    void deactivateAsyncMode();
 
 private slots:
     void createDevices();

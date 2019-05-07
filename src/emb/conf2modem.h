@@ -21,6 +21,18 @@ class Conf2modem : public Conn2modem
 public:
     explicit Conf2modem(const int &dbgExtSrcId, const bool &verboseMode, QObject *parent = Q_NULLPTR);
 
+    struct RezUpdateConnSettings
+    {
+        ZbyrConnSett connSett;
+        QString ifaceParams;
+        RezUpdateConnSettings() {}
+        RezUpdateConnSettings(const ZbyrConnSett &connSett, const QString &ifaceParams) : connSett(connSett), ifaceParams(ifaceParams) {}
+    };
+
+    static RezUpdateConnSettings convertFromVarMap(const QVariantMap &interfaceSettings);
+
+    static RezUpdateConnSettings convertFromVarMapExt(const QVariantMap &interfaceSettings, ZbyrConnSett connSett);
+
     bool openAconnection(const ZbyrConnSett &connSett, QString &connline);
 
 

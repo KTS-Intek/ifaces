@@ -14,4 +14,17 @@
 #define ATND_STATUS_NMODEL  5
 
 
+
+#define DA_MODE_ON              1 //always on
+#define DA_MODE_MGC             2 //always on + magic sequence
+#define DA_MODE_OFF             3 //always off (only local IPv4)
+#define DA_MODE_TCP_SERVICE_OFF 4 //always all tcp services off (only localserver
+
+
+
+
+#define MIN_READ_TO 1
+#define MAX_READ_TO 120000
+
+
 #endif // IFACEEXCHANGETYPESDEFS_H
