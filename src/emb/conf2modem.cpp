@@ -297,6 +297,7 @@ bool Conf2modem::nodeDiscovery(const int &totalModemCount, const qint64 &totalMs
     const QString opername = tr("Node discovery");
     bool sendAtfr = true;
     if(ndtParams.isEmpty()){//first time only
+        ndtParams.insert("started", QDateTime::currentDateTimeUtc().toString("yyyy/MM/dd hh:mm:ss"));
         const QMap<QString,QString> map = getTheModemInfo("ATAD", false, false, opername, errStr);
         if(map.isEmpty())
             return false;
@@ -393,8 +394,7 @@ bool Conf2modem::nodeDiscovery(const int &totalModemCount, const qint64 &totalMs
 
 
     if(stopAll){
-        writeATcommand("ATCN");
-        readDeviceQuick("\r\n", true);
+        exitCommandModeSimple();
         return true;
     }
 
@@ -419,7 +419,11 @@ bool Conf2modem::nodeDiscovery(const int &totalModemCount, const qint64 &totalMs
 #else
         writecommands.append("ATC2 0");//I need at least one item in the list
 #endif
-        return writeSomeCommand(writecommands, false, true, true, opername, errStr);
+        const bool r = writeSomeCommand(writecommands, false, true, true, opername, errStr);
+        emit currentOperation(tr("Exitting command mode, rezult is %1").arg(int(r)));
+        if(!r)
+            readDeviceQuick("\r\n", false);
+        return true;
     }
 
     return false;
@@ -513,10 +517,7 @@ bool Conf2modem::writeSomeCommand(const QStringList &list2write, const bool &ent
             return true;
         }
         errStr = tr("Unknown error (");
-        writeATcommand("ATCN");
-        readDeviceQuick("\r\n", true);// Device();
-
-
+        exitCommandModeSimple();
 
     }
     return false;
@@ -629,8 +630,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
         wasOk4atfr = wait4doubleOk(false, false);
 
         if(!wasOk4atfr){
-            writeATcommand("ATCN");
-            readDeviceQuick("\r\n", true);
+            exitCommandModeSimple();
             wasOk4atfr = true;
         }
         break;
@@ -1292,7 +1292,7 @@ bool Conf2modem::applyNewNetworkSettings(const QStringList &listni, const QVaria
             if(i > 0){
                 QThread::sleep(3);
                 readAll();
-                if(j > 0){
+                if(j > 0){                    
                     writeATcommand("ATCN");
                     readDevice();
                 }

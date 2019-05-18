@@ -138,8 +138,8 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
     QTime globalTime;
     globalTime.start();
 
-    const int globalTimeMax = timeouts.global;
-    const qint32 timeOut_c = timeouts.block;
+    const int timeoutgeneral = timeouts.global;
+    const qint32 timeoutblock = timeouts.block;
 
     readArr = readAll();
 
@@ -155,7 +155,7 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
     const int defmsec2 = isQuickMode ? 50 : 1111;
 
 
-    for(int counter = 0, hasDataCounter = 0; (readArr.isEmpty() || time.elapsed() < timeOut_c) && globalTime.elapsed() < globalTimeMax && counter < MAX_READ_TRYES_FROM_UART; counter++){
+    for(int counter = 0, hasDataCounter = 0; (readArr.isEmpty() || time.elapsed() < timeoutblock) && globalTime.elapsed() < timeoutgeneral && counter < MAX_READ_TRYES_FROM_UART; counter++){
 
         if(!uartAccessChecked && canCheckUartAccess(readArr.isEmpty(), globalTime.elapsed())){
             if((checkUartAccess(readArr, globalTime.elapsed()) || directAccess || uartBlockPrtt))
@@ -178,7 +178,12 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
         if(waitForReadyRead( (uartBlockPrtt) ? defmsec2 : defmsec)){
             readArr.append(readAll());
             hasDataCounter++;
-            time.restart();
+
+#ifdef Q_OS_LINUX
+        qDebug() << "readDevice wait4readyread " << time.elapsed() << timeouts.block << globalTime.elapsed() << timeouts.global << (readArr.isEmpty() || time.elapsed() < timeoutblock) << (globalTime.elapsed() < timeoutgeneral) ;
+#endif
+        time.restart();
+
         }
         if(!readArrHasData && hasDataCounter != 0)
             readArrHasData = !readArr.isEmpty();
@@ -189,9 +194,9 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
 
     }
 
-
-    //    qDebug() << "readDevice " << time.elapsed() << timeouts.block << globalTime.elapsed() << timeouts.global << (readArr.isEmpty() || time.elapsed() < timeOut_c) << (globalTime.elapsed() < globalTimeMax) ;
-
+#ifdef Q_OS_LINUX
+        qDebug() << "readDevice " << time.elapsed() << timeouts.block << globalTime.elapsed() << timeouts.global << (readArr.isEmpty() || time.elapsed() < timeoutblock) << (globalTime.elapsed() < timeoutgeneral) ;
+#endif
     emit dataReadWriteReal(readArr, ifaceName, true);
     if(!uartAccessChecked && (directAccess || uartBlockPrtt || checkUartAccess(readArr, globalTime.elapsed()))){
         if(sayGoodByeIfUartIsNFree("readDevice ", 555, readArr.isEmpty())){
@@ -291,6 +296,32 @@ bool Conn2modem::waitForBytesWritten(const int &msecs)
 
 #else
     return socket->waitForBytesWritten(msecs);
+#endif
+}
+
+qint64 Conn2modem::bytesAvailable()
+{
+    if(!isConnectionWorks())
+        return -1;
+#ifdef ENABLE_EXTSUPPORT_OF_IFACES
+
+
+    switch(lastConnectionType){
+#ifndef DISABLE_SERIALPORT_MODE
+    case IFACECONNTYPE_UART     : return serialPort->bytesAvailable();
+#endif
+#ifndef DISABLE_TCPCLIENT_MODE
+    case IFACECONNTYPE_TCPCLNT  : return socket->bytesAvailable();
+#endif
+#ifndef DISABLE_M2M_MODULE
+    case IFACECONNTYPE_M2MCLNT  : return svahaConnector->bytesAvailable();
+#endif
+    }
+    return -1;
+
+
+#else
+    return socket->bytesAvailable();
 #endif
 }
 
@@ -422,17 +453,19 @@ bool Conn2modem::openTcpConnection(const QString &host, const quint16 &port)
 {
     onDeviceDestr();//reset params
     lastConnectionType = IFACECONNTYPE_TCPCLNT;
+    const int wait4conn = qMax(timeouts.global, 5000);
     if(verboseMode)
-        qDebug() << "Conf2modem::openTcpConnection()";
+        qDebug() << "Conf2modem::openTcpConnection() " << host << port << timeouts.global << wait4conn ;
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection host=%1, port=%2, myPrtt=%3").arg(host).arg(port).arg(QString(writePreffix)));
 
 
     emit openingTcpConnection();
+    emit openingAconnection();
 
     stopAll = false;
     socket->connectToHost(host, port);
 
-    const bool r = socket->waitForConnected(qMax(timeouts.global, 5000));
+    const bool r = socket->waitForConnected(wait4conn);
 
     if(!r){
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection err=%1").arg(socket->errorString()));
@@ -443,6 +476,9 @@ bool Conn2modem::openTcpConnection(const QString &host, const quint16 &port)
         ifaceName = host.contains(":") ? QString("[%1]:%2").arg(host).arg(port) : QString("%1:%2").arg(host).arg(port);
         emit currentOperation(tr("Connection to the remote device was established)"));
     }
+    if(verboseMode)
+        qDebug() << "Conf2modem::openTcpConnection() " << host << port << r ;
+
 
     //#ifdef DISABLE_UART_PRIORITY
     //   if(r){
@@ -464,6 +500,7 @@ bool Conn2modem::openM2mConnection(const QVariantHash &oneProfile)
 {
     onDeviceDestr();//reset params
 
+    emit openingAconnection();
     lastConnectionType = IFACECONNTYPE_M2MCLNT;
     stopAll = false;
 
@@ -496,6 +533,7 @@ bool Conn2modem::openM2mConnection(const QVariantHash &oneProfile)
 bool Conn2modem::openSerialPort(const QString &portName, const qint32 &baudRate, const QStringList &uarts)
 {
     onDeviceDestr();//reset params
+    emit openingAconnection();
     stopAll = false;
     lastConnectionType = IFACECONNTYPE_UART;
     QString mess;
@@ -971,6 +1009,15 @@ void Conn2modem::deactivateAsyncMode()
     disconnect(this, SIGNAL(detectedDisconnectedSerialPort()), this, SLOT(closeSerialPort()));
 
 #endif
+}
+
+void Conn2modem::exitCommandModeSimple()
+{
+
+        writeATcommand("ATCN");
+        readDeviceQuick("\r\n", true);
+
+
 }
 
 //-------------------------------------------------------------------------------------

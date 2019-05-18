@@ -120,6 +120,8 @@ public:
     bool waitForReadyRead(const int &msecs);
     bool waitForBytesWritten(const int &msecs);
 
+    qint64 bytesAvailable();
+
     QByteArray readAll();
 
     qint64 writeATcommand(const QString &atcommand);
@@ -216,6 +218,9 @@ signals:
 
     void detectedDisconnectedSerialPort();
 
+    void openingAconnection();
+
+
 
 public slots:
     void setWritePreffix(QByteArray preffix);
@@ -250,6 +255,8 @@ public slots:
     void activateAsyncMode();
 
     void deactivateAsyncMode();
+
+    void exitCommandModeSimple();
 
 private slots:
     void createDevices();
