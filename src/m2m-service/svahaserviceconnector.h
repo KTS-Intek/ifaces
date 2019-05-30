@@ -31,6 +31,8 @@ public:
     bool waitForReadyRead(const int &msec);
     bool waitForBytesWritten(const int &msec);
 
+    qint64 bytesAvailable();
+
     qint64 write(const QByteArray &arr);
 
     void clear();

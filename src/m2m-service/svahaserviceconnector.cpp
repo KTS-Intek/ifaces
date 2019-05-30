@@ -198,16 +198,20 @@ bool SvahaServiceConnector::waitForReadyRead(const int &msec)
     QTime time;
     time.start();
     bool hasData = false;
-    for(int i = 0, t = 10; time.elapsed() < msec && i < time.elapsed(); i += t){
+    for(int i = -1, t = 10; time.elapsed() < msec && i < time.elapsed(); i += t){
         if(!hasData){
             QMutexLocker locker(&mutex);
             hasData = !readArr.isEmpty();
         }
         if(hasData || stopAll)
             break;
-        QThread::msleep(t);
+        QThread::msleep(quint32(t));
     }
 
+    if(!hasData){
+        QMutexLocker locker(&mutex);
+        hasData = !readArr.isEmpty();
+    }
     return hasData;
 }
 //-----------------------------------------------------------------------
@@ -215,6 +219,14 @@ bool SvahaServiceConnector::waitForBytesWritten(const int &msec)
 {
     QThread::msleep(msec/10);
     return true;
+}
+//-----------------------------------------------------------------------
+qint64 SvahaServiceConnector::bytesAvailable()
+{
+    if(!isOpen())
+        return -1L;
+    QMutexLocker locker(&mutex);
+    return qint64(readArr.length());
 }
 //-----------------------------------------------------------------------
 

@@ -2,14 +2,9 @@
 #Dependencies -
 # type-converter
 #
-
-
-QT       += core network
-
 linux-beagleboard-g++:{
    QT -= gui
 }
-CONFIG += c++11
 
 android:{
 #QT += androidextras
