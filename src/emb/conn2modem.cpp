@@ -56,14 +56,26 @@ bool Conn2modem::isDirectAccess() const
 
 bool Conn2modem::isBlockByPrtt() const
 {
-    return uartBlockPrtt;
+    return
+        #ifdef HASGUI4USR
+            false
+        #else
+                    uartBlockPrtt
+        #endif
+
+            ;
 }
 
 //-------------------------------------------------------------------------------------
 
 bool Conn2modem::isUartBusy() const
 {
-    return (directAccess || uartBlockPrtt);
+    return (directAccess
+
+#ifndef HASGUI4USR
+            || uartBlockPrtt
+#endif
+            );
 }
 
 
@@ -604,7 +616,7 @@ bool Conn2modem::findModemOnPort(QString defPortName, qint32 baudR, QStringList 
     }
 
 
-    lastError = lastError.isEmpty() ? tr("Can't find any device") : lastError;
+    lastError = lastError.isEmpty() ? tr("Couldn't find any device") : lastError;
     return false;
 }
 
@@ -1064,6 +1076,7 @@ void Conn2modem::onDeviceDestr()
                                                  .arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(apiErrCounter));
     modemIsOverRS485 = false;
 
+    directAccess = uartBlockPrtt = false;
 
     if(qAbs(msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) > MAX_MSEC_FOR_COORDINATOR_READY)
         isCoordinatorConfigReady = false;
@@ -1124,6 +1137,7 @@ qint64 Conn2modem::write(const QByteArray &arr)
 
 void Conn2modem::close()
 {
+    uartBlockPrtt = directAccess = false;//reset the states
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
@@ -1145,7 +1159,6 @@ void Conn2modem::close()
     return socket->close();
 #endif
 
-    uartBlockPrtt = directAccess = false;//reset the states
 
 }
 
