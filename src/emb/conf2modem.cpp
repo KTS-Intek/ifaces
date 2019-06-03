@@ -420,7 +420,7 @@ bool Conf2modem::nodeDiscovery(const int &totalModemCount, const qint64 &totalMs
         writecommands.append("ATC2 0");//I need at least one item in the list
 #endif
         const bool r = writeSomeCommand(writecommands, false, true, true, opername, errStr);
-        emit currentOperation(tr("Exitting command mode, rezult is %1").arg(int(r)));
+        emit currentOperation(tr("Exiting the command mode, rezult is '%1'").arg(int(r)));
         if(!r)
             readDeviceQuick("\r\n", false);
         return true;
