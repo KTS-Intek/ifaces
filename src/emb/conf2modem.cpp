@@ -534,7 +534,7 @@ bool Conf2modem::wait4doubleOk(const bool &isAtlbCommand, const bool &ignoreSeco
     if(readArr.isEmpty())
         return false;
 
-    const int maxtimeout = isAtlbCommand ? 7500 : 3000;
+    const int maxtimeout = isAtlbCommand ? 7500 : 5000;
     const QByteArray answr = isAtlbCommand ? "OK\r\nOK\r\r\n" : "OK\r\nOK\r\n";
 
     const QByteArray answr2 = ignoreSecondErr ? "OK\r\nERROR\r\r\n" : QByteArray();
@@ -651,6 +651,9 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
         if(verboseMode)
             qDebug() << "ZbyratorObject::enableDisableApi " << enable << i;
 
+        if(stopAll)
+            return false;
+
         if(i < 1 && wasOk4atfr){
             readDeviceQuick("\r\n", true);
         }else{
@@ -665,10 +668,12 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
 
             if(!isCoordinatorFreeWithRead())
                 continue;
-
+            if(stopAll)
+                return false;
             continue;
         }
-
+        if(stopAll)
+            return false;
         int indxLummerLog = 2;
         QStringList listArr;
         if(enable){
@@ -695,7 +700,8 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
             emit currentOperation(tr("Checking the %1 mode.").arg(apiPlus ? "API" : "API+"));
 
             if(prosh >= 206 && okkk) {
-
+                if(stopAll)
+                    return false;
                 writeATcommand("ATSM");
                 bool ok;
                 const int tmpIntVal = readDevice().left(2).toInt(&ok);
@@ -735,7 +741,8 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                 if(tmpIntVal != listVal.at(la) || !ok){
                     if(verboseMode)
                         qDebug() << "enableDisableApi checkVal " << ok << tmpIntVal << readArr << la << listArr.at(la) << listVal.at(la);
-
+                    if(stopAll)
+                        return false;
                     writeATcommand(listArr.at(la) + QString::number(listVal.at(la)));
                     if(readDevice().toUpper() != "OK\r\n"){
                         retryList++;
@@ -794,7 +801,8 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
 
         int retryList = 0;
         for(int i = 0, iMax = listArr.size(); i < iMax; i++){
-
+            if(stopAll)
+                return false;
             writeATcommand(listArr.at(i));
             QByteArray readArr = readDevice();
 
@@ -802,16 +810,19 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                 if(listArr.at(i) == "ATDB"){
                     QTime time;
                     time.start();
-                    for(int v = 0; v < 100 && time.elapsed() < 30000 && !(readArr.contains("LQI:") && readArr.lastIndexOf("\r\n") > readArr.indexOf("LQI:") ); v++){
+                    for(int v = 0; v < 1000 && time.elapsed() < 30000 && !(readArr.contains("LQI:") && readArr.lastIndexOf("\r\n") > readArr.indexOf("LQI:") ); v++){
                         readArr.append(readDevice());
-                        if(readArr.contains("OK\r\n") || readArr.contains("ERROR\r\n"))
+                        if(readArr.contains("OK\r\n") || readArr.contains("ERROR\r\n") || stopAll)
                             break;
                     }
+                    emit currentOperation(QString("atdb out '%1'").arg(QString("r=%1, h=%2").arg(QString(readArr.simplified())).arg(QString(readArr.toHex()))));
+
                     if(readArr.contains("OK\r\n") || readArr.contains("ERROR\r\n"))
                         readArr.clear();
 
                     if(!(readArr.contains("LQI:") && readArr.lastIndexOf("\r\n") > readArr.indexOf("LQI:")))
                         readArr.clear();
+
                 }
                 aboutModem.insert(listArr.at(i), readArr.simplified().trimmed().toUpper());
                 retryList = 0;
@@ -911,6 +922,8 @@ bool Conf2modem::isCoordinatorGood(const bool &forced, const bool &readAboutZigB
 QVariantHash Conf2modem::addCurrentDate2aboutModem(QVariantHash &aboutModem)
 {
     aboutModem.insert("Updated", QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
+    if(verboseMode)
+        qDebug() << "addCurrentDate2aboutModem aboutModem " << aboutModem;
     return aboutModem;
 }
 
