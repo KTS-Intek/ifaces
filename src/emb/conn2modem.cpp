@@ -16,6 +16,7 @@ Conn2modem::Conn2modem(const int &dbgExtSrcId, const bool &verboseMode, QObject 
     createDevices();
     onDeviceDestr();
 
+    setMaxDataFromModem(0);//use defined value
     writePrtt = 0;
     apiErrCounter = 0;
     msecWhenCoordinatorWasGood = 0;
@@ -76,6 +77,16 @@ bool Conn2modem::isUartBusy() const
             || uartBlockPrtt
 #endif
             );
+}
+
+int Conn2modem::getMaxDataFromModem()
+{
+    return (maxDataFromModem < 1 || maxDataFromModem > 5000) ? MAX_READ_FROM_UART : maxDataFromModem;
+}
+
+void Conn2modem::setMaxDataFromModem(const int &bytes)
+{
+    maxDataFromModem = bytes;
 }
 
 
@@ -177,7 +188,7 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
 
         if(readArrHasData){
             const int len = readArr.length();
-            if(len > MAX_READ_FROM_UART){
+            if(len > getMaxDataFromModem()){
                 emit bigReadData(len);
                 incrementApiErrCounter();
                 break;
@@ -192,6 +203,7 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
             hasDataCounter++;
 
 #ifdef Q_OS_LINUX
+            if(verboseMode)
         qDebug() << "readDevice wait4readyread " << time.elapsed() << timeouts.block << globalTime.elapsed() << timeouts.global << (readArr.isEmpty() || time.elapsed() < timeoutblock) << (globalTime.elapsed() < timeoutgeneral) ;
 #endif
         time.restart();
@@ -207,6 +219,7 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
     }
 
 #ifdef Q_OS_LINUX
+     if(verboseMode)
         qDebug() << "readDevice " << time.elapsed() << timeouts.block << globalTime.elapsed() << timeouts.global << (readArr.isEmpty() || time.elapsed() < timeoutblock) << (globalTime.elapsed() < timeoutgeneral) ;
 #endif
     emit dataReadWriteReal(readArr, ifaceName, true);
@@ -481,7 +494,7 @@ bool Conn2modem::openTcpConnection(const QString &host, const quint16 &port)
 
     if(!r){
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection err=%1").arg(socket->errorString()));
-        emit currentOperation(tr("Can't connect to the remote device. %1").arg(socket->errorString()));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
+        emit currentOperation(tr("Couldn't connect to the remote device. %1").arg(socket->errorString()));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
         closeDevice();
     }else{
         connectionDownCounter = 0;
@@ -522,7 +535,7 @@ bool Conn2modem::openM2mConnection(const QVariantHash &oneProfile)
 
     if(!r){
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection err=%1").arg(svahaConnector->errorString()));
-        emit currentOperation(tr("Can't connect to the remote device. %1").arg(svahaConnector->errorString()));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
+        emit currentOperation(tr("Couldn't connect to the remote device. %1").arg(svahaConnector->errorString()));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
         closeDevice();
     }else{
         ifaceName = svahaConnector->getLastConnDev();
@@ -556,7 +569,7 @@ bool Conn2modem::openSerialPort(const QString &portName, const qint32 &baudRate,
 
     if(!r){
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection err=%1").arg(mess));
-        emit currentOperation(tr("Can't connect to the remote device. %1").arg(mess));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
+        emit currentOperation(tr("Couldn't connect to the remote device. %1").arg(mess));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
         closeDevice();
     }else{
         connectionDownCounter = 0;
@@ -581,42 +594,52 @@ bool Conn2modem::findModemOnPort(QString defPortName, qint32 baudR, QStringList 
     QString lastuarterr;
     for(int i = 0; i < 1000 && !uarts.isEmpty(); i++){
 
-        const QString portN = uarts.takeFirst();
-
-
-        emit currentOperation(tr("Trying to open %1").arg(portN));
-        ifaceName = portN;
-        serialPort->setPortName(portN);
-        if(serialPort->open(QIODevice::ReadWrite)){
-            if(serialPort->setBaudRate(baudR) && serialPort->setParity(QSerialPort::NoParity) && serialPort->setStopBits(QSerialPort::OneStop) &&
-                    serialPort->setDataBits(QSerialPort::Data8) && serialPort->setFlowControl(QSerialPort::NoFlowControl)){
-
-                serialPort->clear();
-                need2closeSerial = false;
-                emit onSerialPortOpened(portN);
-
-
-                if(ignoreUartsChecks){
-                    emit currentOperation(tr("UART checks are disabled"));
-                    return true;
-                }
-
-                const bool r = request2modemOn();
-
-                if(r)
-                    return true;
-
-                emit stopCheckCurrPort();
-
-            }else
-                lastuarterr = serialPort->errorString();
+        if(openSerialPortExt(uarts.takeFirst(), baudR, QSerialPort::Data8, QSerialPort::OneStop, QSerialPort::NoParity, QSerialPort::NoFlowControl, ignoreUartsChecks, lastuarterr)){
+            lastError.clear();
+            return true;
         }
-        lastuarterr = serialPort->errorString();
-        serialPort->close();
+
     }
 
 
     lastError = lastError.isEmpty() ? tr("Couldn't find any device") : lastError;
+    return false;
+}
+
+bool Conn2modem::openSerialPortExt(const QString &portName, const qint32 &baudRate, const QSerialPort::DataBits &data, const QSerialPort::StopBits &stopbits,
+                                   const QSerialPort::Parity &parity, const QSerialPort::FlowControl &flow, const bool &ignoreUartsChecks, QString lastuarterr)
+{
+
+
+    emit currentOperation(tr("Trying to open %1").arg(portName));
+    ifaceName = portName;
+    serialPort->setPortName(portName);
+    if(serialPort->open(QIODevice::ReadWrite)){
+        if(serialPort->setBaudRate(baudRate) && serialPort->setParity(parity) && serialPort->setStopBits(stopbits) &&
+                serialPort->setDataBits(data) && serialPort->setFlowControl(flow)){
+
+            serialPort->clear();
+            need2closeSerial = false;
+            emit onSerialPortOpened(portName);
+
+
+            if(ignoreUartsChecks){
+                emit currentOperation(tr("UART checks are disabled"));
+                return true;
+            }
+
+            const bool r = request2modemOn();
+
+            if(r)
+                return true;
+
+            emit stopCheckCurrPort();
+
+        }else
+            lastuarterr = serialPort->errorString();
+    }
+    lastuarterr = serialPort->errorString();
+    serialPort->close();
     return false;
 }
 
@@ -896,7 +919,8 @@ void Conn2modem::incrementApiErrCounter()
         close();
     }
 
-    emit currentOperation(tr("Can't activate the API mode, counter: %1").arg(apiErrCounter));
+    emit onApiErrorIncremented(apiErrCounter);
+    emit currentOperation(tr("Couldn't activate the API mode, counter: %1").arg(apiErrCounter));
 
     if(apiErrCounter > MAX_TRIES_FOR_HARD_RESET){
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem incrementApiErrCounter directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, apiErrCounter=%4")

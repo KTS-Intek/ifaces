@@ -420,7 +420,7 @@ bool Conf2modem::nodeDiscovery(const int &totalModemCount, const qint64 &totalMs
         writecommands.append("ATC2 0");//I need at least one item in the list
 #endif
         const bool r = writeSomeCommand(writecommands, false, true, true, opername, errStr);
-        emit currentOperation(tr("Exiting the command mode, rezult is '%1'").arg(int(r)));
+        emit currentOperation(tr("Exiting the command mode, result is '%1'").arg(int(r)));
         if(!r)
             readDeviceQuick("\r\n", false);
         return true;
@@ -475,7 +475,7 @@ bool Conf2modem::writeSomeCommand(const QStringList &list2write, const bool &ent
             if(sayGoodByeIfUartIsNFree(operationName, 555))
                 return false;
 
-            errStr = tr("Can't enter the command mode(");
+            errStr = tr("Couldn't enter the command mode(");
             continue;
         }
 
@@ -615,7 +615,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
 
 
         if(!enterCommandMode()){
-            emit currentOperation(tr("Can't enter the command mode("));
+            emit currentOperation(tr("Couldn't enter the command mode("));
 
 
             if(!isCoordinatorFreeWithRead())
@@ -664,7 +664,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                 return false;
         }
         if(!enterCommandMode()){
-            emit currentOperation(tr("Can't enter the command mode("));
+            emit currentOperation(tr("Couldn't enter the command mode("));
 
             if(!isCoordinatorFreeWithRead())
                 continue;
@@ -709,7 +709,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                     ifTrueATCN = false;
                     writeATcommand("ATSM 0");
                     if(readDevice().toUpper() != "OK\r\n"){
-                        emit currentOperation(tr("Can't configure the modem."));
+                        emit currentOperation(tr("Couldn't set up the modem"));
                         lSleep(11111);
                         continue;
                     }
@@ -759,7 +759,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
             }
             listArr.clear();
             if(!allGood){
-                emit currentOperation(tr("Can't configure the modem."));
+                emit currentOperation(tr("Couldn't set up the modem"));
                 lSleep(6666);
                 continue;
             }
@@ -842,7 +842,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
 
         if(retryList > 0){
             ifTrueATCN = false;
-            emit currentOperation(tr("Can't configure the modem."));
+            emit currentOperation(tr("Couldn't set up the modem"));
         }else{
             if(!ifTrueATCN){ //write ATFR
                 QTime time;
@@ -852,7 +852,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                     readArr.append(readDevice().toUpper());
 
                 if(!readArr.contains("OK\r\n")){
-                    emit currentOperation( tr("Can't configure the modem."));
+                    emit currentOperation(tr("Couldn't set up the modem"));
                     lSleep(6666);
                     continue;
                 }
@@ -1140,7 +1140,7 @@ bool Conf2modem::quickRadioSetupExt(const QVariantMap &insettings, QString &errs
 
     if(insettings.value("changeni").toBool()){
         if(!changeni(QString(), listni.first(), false)){
-            errstr = tr("can't change NI");
+            errstr = tr("Couldn't change the NI");
             return true;
         }
     }

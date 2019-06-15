@@ -102,7 +102,9 @@ public:
 
     bool isUartBusy() const;
 
+    int getMaxDataFromModem();
 
+    void setMaxDataFromModem(const int &bytes);
 
     bool isConnectionWorks();
 
@@ -153,6 +155,8 @@ public:
 
     bool findModemOnPort(QString defPortName, qint32 baudR, QStringList uarts, QString &lastError);
 
+    bool openSerialPortExt(const QString &portName, const qint32 &baudRate, const QSerialPort::DataBits &data, const QSerialPort::StopBits &stopbits, const QSerialPort::Parity &parity,
+                           const QSerialPort::FlowControl &flow, const bool &ignoreUartsChecks, QString lastuarterr);
     bool request2modemOn();
 #endif
 
@@ -221,6 +225,8 @@ signals:
     void openingAconnection();
 
 
+    void onApiErrorIncremented(int errcounter);
+
 
 public slots:
     void setWritePreffix(QByteArray preffix);
@@ -269,6 +275,8 @@ private:
     qint64 write(const QByteArray &arr);
 
     void close();
+
+    int maxDataFromModem;
 
 };
 
