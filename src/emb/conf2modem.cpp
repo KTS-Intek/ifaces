@@ -134,7 +134,7 @@ bool Conf2modem::enterCommandMode()
     write2dev(dataP);
 
     QByteArray readArr = readDeviceQuick("\r\n", false);
-    if(readArr.isEmpty() && lastCommandWasAtcn){
+    if(readArr.isEmpty() && lModemState.lastCommandWasAtcn){
         write2dev(dataP);
         readArr = readDevice();
     }
@@ -160,7 +160,7 @@ bool Conf2modem::enterCommandMode()
     }
 
 #ifdef HASGUI4USR
-    modemIsOverRS485 = (readArr == "O\r\n");
+    lModemState.modemIsOverRS485 = (readArr == "O\r\n");
 #endif
     for( int retry = 0, odyRaz = 0; retry < 7 && readArr.left(7).toUpper() != "OKERROR" && readArr.left(5).toUpper() != "ERROR" ; retry++) {//zminyty symvoly vhody v comandnyj rejym
 
@@ -196,14 +196,14 @@ bool Conf2modem::enterCommandMode()
 
 #ifdef HASGUI4USR
         if(readArr == "O\r\n")
-            modemIsOverRS485 = true;
+            lModemState.modemIsOverRS485 = true;
 #endif
 
     }
 
 
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem enterCommandMode 3643 directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, readArr=%4, isEntered=%5")
-                          .arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(QString(readArr.toHex())).arg((bool)(readArr.left(7).toUpper() == "OKERROR" || readArr.left(5).toUpper() == "ERROR")));
+                          .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(QString(readArr.toHex())).arg((bool)(readArr.left(7).toUpper() == "OKERROR" || readArr.left(5).toUpper() == "ERROR")));
 
     return (readArr.left(7).toUpper() == "OKERROR" || readArr.left(5).toUpper() == "ERROR");
 }
@@ -301,13 +301,13 @@ bool Conf2modem::nodeDiscovery(const int &totalModemCount, const qint64 &totalMs
         const QMap<QString,QString> map = getTheModemInfo("ATAD", false, false, opername, errStr);
         if(map.isEmpty())
             return false;
-        if(modemIsOverRS485){
+        if(lModemState.modemIsOverRS485){
             errStr = tr("Node Discovery Tool doesn't support RS485");
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
 #ifdef ISNATIVEIFACE
             //WTF???
-                  modemIsOverRS485 = false;
+                  lModemState.modemIsOverRS485 = false;
                   return false;
 #else
 
@@ -316,7 +316,7 @@ bool Conf2modem::nodeDiscovery(const int &totalModemCount, const qint64 &totalMs
 
 #else
       //WTF???
-            modemIsOverRS485 = false;
+            lModemState.modemIsOverRS485 = false;
             return false;
 #endif
         }
@@ -428,6 +428,14 @@ bool Conf2modem::nodeDiscovery(const int &totalModemCount, const qint64 &totalMs
 
     return false;
 }
+//-------------------------------------------------------------------------------------
+bool Conf2modem::writeAtmd(const int &atmdval, QString &errstr)
+{
+    const bool r = writeCommands2aModem(QString("ATMD %1;ATWR;ATCN").arg(atmdval).split(";"), errstr);
+    if(r)
+        lModemState.lastAtmdValue = atmdval;
+    return r;
+}
 
 //-------------------------------------------------------------------------------------
 
@@ -439,7 +447,7 @@ bool Conf2modem::writeCommands2aModem(const QStringList &lcommands, QString &err
         exitthecommandmode = !lexitcm.contains(lcommands.last().toUpper().left(4));
     }
 
-    return writeSomeCommand(lcommands, exitthecommandmode, true, true, tr("Changing the configuration"), errStr);
+    return writeSomeCommand(lcommands, true, exitthecommandmode, true, tr("Changing the configuration"), errStr);
 
 }
 
@@ -502,20 +510,17 @@ bool Conf2modem::writeSomeCommand(const QStringList &list2write, const bool &ent
 
         writeATcommand(atfrAtTheEnd ? "ATFR" : "ATCN");
 
-        QTime time;
-        time.start();
-        QByteArray readArr2 = readDevice();
-
-        while(time.elapsed() < (9000) && !readArr2.contains("O") )
-            readArr2.append(readDevice());
 
 
-        if(readArr2.startsWith("OK\r\n")){
+        if( (atfrAtTheEnd && wait4doubleOk(false, false)) || (!atfrAtTheEnd && readDevice().startsWith("OK\r\n"))){
             emit currentOperation(tr("Done '%1'").arg(operationName));
 
-            isCoordinatorConfigReady = false;
+            lModemState.isCoordinatorConfigReady = false;
             return true;
         }
+
+
+
         errStr = tr("Unknown error (");
         exitCommandModeSimple();
 
@@ -534,7 +539,7 @@ bool Conf2modem::wait4doubleOk(const bool &isAtlbCommand, const bool &ignoreSeco
     if(readArr.isEmpty())
         return false;
 
-    const int maxtimeout = isAtlbCommand ? 7500 : 5000;
+    const int maxtimeout = isAtlbCommand ? 7500 : 6000;
     const QByteArray answr = isAtlbCommand ? "OK\r\nOK\r\r\n" : "OK\r\nOK\r\n";
 
     const QByteArray answr2 = ignoreSecondErr ? "OK\r\nERROR\r\r\n" : QByteArray();
@@ -598,14 +603,14 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
 
     bool breakNow = false;
 
-    if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem enableDisableApi a directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, apiErrCounter=%4, readAboutZigBee=%5")
-                          .arg(directAccess).arg(uartBlockPrtt).arg(QString(writePreffix)).arg(apiErrCounter).arg(int(readAboutZigBee)));
+    if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem enableDisableApi a directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, lModemState.apiErrCounter=%4, readAboutZigBee=%5")
+                          .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(lModemState.apiErrCounter).arg(int(readAboutZigBee)));
 
     bool wasOk4atfr = false;
     for(int i = 0; i < 3 && !breakNow; i++){
         emit currentOperation(tr("API enbl=%1, prtt=%2, rtr=%3").arg(enable).arg(QString(writePreffix)).arg(i));
         if(verboseMode)
-            qDebug() << "ZbyratorObject::enableDisableApi ATFR " << enable << i << directAccess;
+            qDebug() << "ZbyratorObject::enableDisableApi ATFR " << enable << i << lModemState.directAccess;
 
         if(!isCoordinatorFreeWithRead())
             continue;
@@ -639,7 +644,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
     }
 
 #ifdef HASGUI4USR
-    if(modemIsOverRS485)
+    if(lModemState.modemIsOverRS485)
         return true;
 #endif
     if(!wasOk4atfr)
@@ -716,10 +721,17 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                 }
             }
 
+
             QList<int> listVal;
             listVal << 1 << 0 << 1 << 0 ;
 
             listArr = QString("ATAP ATIR ATIU ATC1").split(' ');
+
+            if(lModemState.atmd2write > 0){
+                listVal.append(lModemState.atmd2write);
+                listArr.append("ATMD");
+                lModemState.lastAtmdValue = lModemState.atmd2write;
+            }
 
             if(apiPlus){
                 if(fuckingEnrgmr)
@@ -788,7 +800,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
         QStringList listAboutModem;
 
         if(readAboutZigBee){
-            listAboutModem = QString("ATAD ATPL ATCH ATID ATSH ATSL ATHV ATVR ATDB").split(" ", QString::SkipEmptyParts);
+            listAboutModem = QString("ATAD ATPL ATCH ATID ATSH ATSL ATHV ATMD ATVR ATDB").split(" ", QString::SkipEmptyParts);
             if(prosh > 203)
                 listAboutModem.append("ATHP");
 
@@ -863,6 +875,8 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
 
 
             if(readAboutZigBee && !aboutModem.isEmpty()){
+                setAtmdValueFromString(aboutModem.value("ATMD").toString());
+
                 aboutModem = conf2modemHelper::aboutZigBeeModem2humanReadable(aboutModem);
                 if(!aboutModem.isEmpty()){
                     emit onAboutZigBee(addCurrentDate2aboutModem(aboutModem));
@@ -884,35 +898,35 @@ bool Conf2modem::isCoordinatorGood(const bool &forced, const bool &readAboutZigB
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 #ifndef ISNATIVEIFACE
-    isCoordinatorConfigReady = (isCoordinatorConfigReady || !forced);
+    lModemState.isCoordinatorConfigReady = (lModemState.isCoordinatorConfigReady || !forced);
 #endif
 #endif
 
 
-    if(!forced && isCoordinatorConfigReady && qAbs(msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) < MAX_MSEC_FOR_COORDINATOR_READY )
-        return isCoordinatorConfigReady;
+    if(!forced && lModemState.isCoordinatorConfigReady && qAbs(lModemState.msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) < MAX_MSEC_FOR_COORDINATOR_READY )
+        return lModemState.isCoordinatorConfigReady;
 
-    qDebug() << "isCoordinatorGood " << qAbs(msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) << MAX_MSEC_FOR_COORDINATOR_READY ;
+    qDebug() << "isCoordinatorGood " << qAbs(lModemState.msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) << MAX_MSEC_FOR_COORDINATOR_READY ;
 
-    isCoordinatorConfigReady = false;
+    lModemState.isCoordinatorConfigReady = false;
     if(enableDisableApi(true, readAboutZigBee)){
         emit currentOperation(tr("The API mode is active"));
 
         emit onApiModeEnabled();
-        isCoordinatorConfigReady = true;
-        apiErrCounter = 0;
-        msecWhenCoordinatorWasGood = QDateTime::currentMSecsSinceEpoch();
+        lModemState.isCoordinatorConfigReady = true;
+        lModemState.apiErrCounter = 0;
+        lModemState.msecWhenCoordinatorWasGood = QDateTime::currentMSecsSinceEpoch();
 
     }
 
 
-    if(uartBlockPrtt || directAccess)
-        return isCoordinatorConfigReady;
+    if(lModemState.uartBlockPrtt || lModemState.directAccess)
+        return lModemState.isCoordinatorConfigReady;
 
-    if(!isCoordinatorConfigReady)
+    if(!lModemState.isCoordinatorConfigReady)
         incrementApiErrCounter();
 
-    return isCoordinatorConfigReady;
+    return lModemState.isCoordinatorConfigReady;
 
 }
 
@@ -1092,6 +1106,18 @@ bool Conf2modem::decodeNtdOneLine(const QString &line, const qint64 &msec, const
     return true;
 }
 
+void Conf2modem::setAtmdValueFromString(const QString &s)
+{
+    if(!s.isEmpty()){
+        bool ok;
+        const int v = s.simplified().trimmed().toInt(&ok, 16);
+        if(ok)
+            lModemState.lastAtmdValue = v;
+    }
+
+
+}
+
 //-------------------------------------------------------------------------------------
 #ifdef ENABLE_EMBEEMODEM_EXTENDED_OPERATIONS
 
@@ -1237,7 +1263,7 @@ bool Conf2modem::isCoordinatorReady4quickRadioSetupExt(const QVariantMap &insett
 
          QTime time;
          time.start();
-         emit currentOperation(tr("Waiting for the network rediness..."));
+         emit currentOperation(tr("Waiting for the network readiness..."));
 
          for(int i = 0; i < 10000 && time.elapsed() < wait4readiness && !stopAll; i++){
              readDevice();//wait for the second OK, readiness
@@ -1315,7 +1341,7 @@ bool Conf2modem::applyNewNetworkSettings(const QStringList &listni, const QVaria
             if(stopAll)
                 return true;
 
-            if(!enterCommandMode(tr("Applying new network setings"))){
+            if(!enterCommandMode(tr("Applying new network settings"))){
                 j++;
                 continue;
             }

@@ -59,18 +59,33 @@ public:
 
     DeviceTimeouts timeouts;
 
-    bool directAccess;
-    bool uartBlockPrtt;
-
-    bool isCoordinatorConfigReady;
-    quint8 apiErrCounter;
-    qint64 msecWhenCoordinatorWasGood;
-
-    bool lastCommandWasAtcn;
 
     quint16 connectionDownCounter;
 
-    bool modemIsOverRS485;
+
+    struct LastModemState
+    {
+        //-1 do not change/unk value, 0 - disabled, >0 enabled
+        int lastAtmdValue;//last value from the ATMD command
+        int atmd2write;//write this value during the configuration, 0xFF is the maximum
+
+        bool directAccess;
+        bool uartBlockPrtt;
+
+        bool isCoordinatorConfigReady;
+        quint8 apiErrCounter;
+        qint64 msecWhenCoordinatorWasGood;
+
+        bool lastCommandWasAtcn;
+
+        bool modemIsOverRS485;
+
+        qint64 lastWriteLen;
+
+        LastModemState() :
+            lastAtmdValue(-1), atmd2write(-1), directAccess(false), uartBlockPrtt(false), isCoordinatorConfigReady(false),
+            apiErrCounter(0), msecWhenCoordinatorWasGood(0), lastCommandWasAtcn(false), modemIsOverRS485(false), lastWriteLen(-1) {}
+    } lModemState;
 
 #ifndef DISABLE_TCPCLIENT_MODE
     QTcpSocket *socket;

@@ -17,6 +17,6 @@
 #define PEREDAVATOR_PRTT_VERY_VVVVVVVLOW    0xC
 #define PEREDAVATOR_PRTT_VERY_VVVVVVVVLOW   0xD
 #define PEREDAVATOR_PRTT_VERY_VVVVVVVVVLOW  0xE
-#define PEREDAVATOR_PRTT_VERY_VVVVVVVVVVLOW 0xF//reset an access level to UART
+#define PEREDAVATOR_PRTT_VERY_VVVVVVVVVVLOW 0xF//reset an access level to UART , IF data is 'AtCN\r\n' - it is a WD check, send a UART state
 
 #endif // PEREDAVATORPRIORITY_H

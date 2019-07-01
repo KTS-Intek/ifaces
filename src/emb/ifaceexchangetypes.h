@@ -106,7 +106,8 @@ struct ExchangeWithOneModemStat
     quint32 totalMessCounter;
     quint32 usflDataLen;
 
-    qint32 emptyAnswerCounter;
+    qint32 badAnswerCounter;//empty or bad data, it resets by a good answer
+    qint32 emptySequenceAnswerCounter;//it counts only empty answers that follow each other, it resets by a good answer
 
     QHash<QByteArray,quint32> hashMessRetryCounter;
 
@@ -114,7 +115,7 @@ struct ExchangeWithOneModemStat
     QTime time4poll;//час між новими завданнями
     QTime time4multicast;//час для паузи в обміні, для системи агрегатування
 
-    ExchangeWithOneModemStat() : byte2meter(0), bytesFromMeter(0), totalMessCounter(0), usflDataLen(0)  {}
+    ExchangeWithOneModemStat() : byte2meter(0), bytesFromMeter(0), totalMessCounter(0), usflDataLen(0), badAnswerCounter(0), emptySequenceAnswerCounter(0)  {}
 };
 
 

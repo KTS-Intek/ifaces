@@ -12,5 +12,6 @@
 
 #define MAX_MSEC_BETWEEN_UPDATE_ABOUTM  10800000//3*60*60*1000
 
+#define MAX_EMPTY_MESSAGE_COUNT         10 //It is for the peredavator-bbb freze detection,
 
 #endif // EMBEELIMITS_H

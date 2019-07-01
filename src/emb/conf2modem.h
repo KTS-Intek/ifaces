@@ -25,6 +25,8 @@ public:
     {
         ZbyrConnSett connSett;
         QString ifaceParams;
+
+
         RezUpdateConnSettings() {}
         RezUpdateConnSettings(const ZbyrConnSett &connSett, const QString &ifaceParams) : connSett(connSett), ifaceParams(ifaceParams) {}
     };
@@ -50,6 +52,7 @@ public:
 
     bool nodeDiscovery(const int &totalModemCount, const qint64 &totalMsecElapsed, const qint64 &totalMsecLimt, const bool &hardRecovery, int &modemReady, QStringList &listreadynis, QVariantMap &ndtParams, QString &errStr);
 
+    bool writeAtmd(const int &atmdval, QString &errstr);
 
     bool writeCommands2aModem(const QStringList &lcommands, QString &errStr);
 
@@ -126,6 +129,7 @@ signals:
 
 public slots:
 
+    void setAtmdValueFromString(const QString &s);
 
 
 
