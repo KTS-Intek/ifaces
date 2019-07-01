@@ -12,6 +12,8 @@ class SvahaSocket : public QTcpSocket
 public:
     explicit SvahaSocket(const quint8 &sesionId, QObject *parent = 0);
 
+    QMap<QString,QStringList> key2header;
+
     void setConnectionSett(const QString &host, const quint16 &port, const QString &objIdOrMac, const bool &cmMAC, const int &timeOut, const int &timeOutB,
                            const QString &login, const QString &pas, const bool &useMac);
 
@@ -152,7 +154,6 @@ private:
     int totalTables, doneTables, blockDone;
     QHash<int, QVariantHash> hashMemoWrite;
 
-    QMap<QString,QStringList> key2header;
 
 };
 

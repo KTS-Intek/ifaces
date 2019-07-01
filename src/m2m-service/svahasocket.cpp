@@ -139,7 +139,7 @@ void SvahaSocket::startConnection()
                 return;
             }
         }else{
-            emit add2systemLog(sessionId, tr("Can't connect to remote server.<br>Error: %1").arg(errorString()));
+            emit add2systemLog(sessionId, tr("Couldn't connect to remote server.<br>Error: %1").arg(errorString()));
         }
     }else{
         isSvahaService = false;
@@ -168,7 +168,7 @@ void SvahaSocket::startConnection()
             block4activeClient = false;
 
         }else{
-            emit add2systemLog(sessionId, tr("Can't connect to the temporary service.<br>Error: %1").arg(errorString()));
+            emit add2systemLog(sessionId, tr("Couldn't connect to the temporary service.<br>Error: %1").arg(errorString()));
             onDisconn();
             return;
         }
@@ -490,7 +490,7 @@ void SvahaSocket::decodeReadDataJSON(const QByteArray &dataArr)
                 block4activeClient = false;
 
             }else{
-                emit add2systemLog(sessionId, tr("Can't connect to the temporary service.<br>Error: %1").arg(errorString()));
+                emit add2systemLog(sessionId, tr("Couldn't connect to the temporary service.<br>Error: %1").arg(errorString()));
                 onDisconn();
                 return;
             }
@@ -500,7 +500,7 @@ void SvahaSocket::decodeReadDataJSON(const QByteArray &dataArr)
             for(int i = 0, iMax = l.size(); i < iMax; i++)
                 list.append(l.at(i).toString());
 
-            emit add2systemLog( sessionId, tr("%1 devices founded").arg(list.size()));
+            emit add2systemLog( sessionId, tr("%1 devices were found").arg(list.size()));
 
             emit onYouCanSelectDevice(sessionId, list);
 
@@ -598,7 +598,7 @@ void SvahaSocket::onDisconn()
 
     if(!iAmDone){
         iAmDone = true;
-        emit add2systemLog( sessionId, tr("Connection closed."));
+        emit add2systemLog( sessionId, tr("Connection was closed."));
     }
 
     iAmDone = true;
@@ -914,7 +914,6 @@ int SvahaSocket::onCOMMAND_READ_METER_LIST_FRAMED(const QVariantHash &h, bool &r
 
     }
 
-    qDebug() << "COMMAND_READ_METER_LIST_FRAMED "  << lastIndx << iMax << counterF ;
 
     if(!lHeader.isEmpty() || !meters.isEmpty()){
         QVariantHash hash;

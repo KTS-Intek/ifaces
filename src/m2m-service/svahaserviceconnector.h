@@ -105,6 +105,7 @@ public slots:
     void softDelete();
 
     void showMessS(quint8 sessionId, QString mess);
+    void setHeader4map(QString key, QStringList header);
 
 
 private:
@@ -125,6 +126,9 @@ private:
     QStringList selectList;
 
     QHash<int, QVariantHash> hashMemoWrite;
+
+    QMap<QString,QStringList> key2header;
+
 
 };
 

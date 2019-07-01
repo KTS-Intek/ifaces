@@ -93,6 +93,8 @@ void SvahaServiceConnector::connect2hostViaSvaha(QVariantHash oneProfile, const 
         if(!hashMemoWrite.isEmpty())
             socket->setDoAfterConn(hashMemoWrite.keys().first(), hashMemoWrite.value(hashMemoWrite.keys().first()));
 
+        socket->key2header = this->key2header;
+
         QThread *t = new QThread;
         socket->moveToThread(t);
 
@@ -187,7 +189,7 @@ bool SvahaServiceConnector::waitForConnected(const int &msec)
         if(selectList.isEmpty())
             lastErrorStr = tr("No device");
         else
-            lastErrorStr = tr("%1 devices founded").arg(selectList.size());
+            lastErrorStr = tr("%1 devices were found").arg(selectList.size());
     }
 
     return oneConnReady;
@@ -369,12 +371,12 @@ void SvahaServiceConnector::startWait4connInThread()
             return;
         }
         if(getLastSelDevList().isEmpty()){
-            emit showMess(tr("Can't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
-            emit add2systemLog(tr("Can't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
+            emit showMess(tr("Couldn't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
+            emit add2systemLog(tr("Couldn't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
 
         }else{
-            emit showMess(tr("Can't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
-            emit add2systemLog(tr("Can't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
+            emit showMess(tr("Couldn't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
+            emit add2systemLog(tr("Couldn't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
 
         }
         emit onConnectionWorks(false);
@@ -397,6 +399,11 @@ void SvahaServiceConnector::showMessS(quint8 sessionId, QString mess)
     if(sessionId != this->sessionId )
         return;
     emit showMess(mess);
+}
+
+void SvahaServiceConnector::setHeader4map(QString key, QStringList header)
+{
+    key2header.insert(key, header);
 }
 //-----------------------------------------------------------------------
 
