@@ -507,6 +507,7 @@ bool Conf2modem::writeSomeCommand(const QStringList &list2write, const bool &ent
             emit currentOperation(tr("Done '%1'").arg(operationName));
             return true;
         }
+        emit currentOperation(tr("atfr 510 '%1'").arg(int(atfrAtTheEnd)));
 
         writeATcommand(atfrAtTheEnd ? "ATFR" : "ATCN");
 
@@ -533,24 +534,29 @@ bool Conf2modem::writeSomeCommand(const QStringList &list2write, const bool &ent
 
 bool Conf2modem::wait4doubleOk(const bool &isAtlbCommand, const bool &ignoreSecondErr)
 {
+
     QTime time;
     time.start();
     QByteArray readArr = readDevice().toUpper();
     if(readArr.isEmpty())
         return false;
 
-    const int maxtimeout = isAtlbCommand ? 7500 : 6000;
+    const int maxtimeout = isAtlbCommand ? 7500 : 6500;
     const QByteArray answr = isAtlbCommand ? "OK\r\nOK\r\r\n" : "OK\r\nOK\r\n";
 
     const QByteArray answr2 = ignoreSecondErr ? "OK\r\nERROR\r\r\n" : QByteArray();
+
 
     for(int nn = 0; nn < 1000 && time.elapsed() < maxtimeout && readArr != answr && !stopAll; nn++){
         readArr.append(readDevice().toUpper());
         if(ignoreSecondErr && readArr == answr2)
             return true;
+        QThread::msleep(50);
     }
     //for ATFR I need only OK
-    return (isAtlbCommand ? (readArr == answr) : (readArr.contains("OK")));
+    const bool r = (isAtlbCommand ? (readArr == answr) : (readArr.contains("OK")));
+    return r;
+
 
 }
 
@@ -612,15 +618,23 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
         if(verboseMode)
             qDebug() << "ZbyratorObject::enableDisableApi ATFR " << enable << i << lModemState.directAccess;
 
-        if(!isCoordinatorFreeWithRead())
-            continue;
+        if(!isCoordinatorFreeWithRead()){
+            emit currentOperation(tr("API enbl=%1, prtt=%2, rtr=%3 isCoordinatorFreeWithRead").arg(enable).arg(QString(writePreffix)).arg(i));
 
-        if(!isConnectionWorks())
+            continue;
+        }
+
+
+        if(!isConnectionWorks()){
+            emit currentOperation(tr("API enbl=%1, prtt=%2, rtr=%3 !isConnectionWorks").arg(enable).arg(QString(writePreffix)).arg(i));
+
             return false;
+        }
 
 
         if(!enterCommandMode()){
             emit currentOperation(tr("Couldn't enter the command mode("));
+            emit currentOperation(tr("API enbl=%1, prtt=%2, rtr=%3 !enterCommandMode").arg(enable).arg(QString(writePreffix)).arg(i));
 
 
             if(!isCoordinatorFreeWithRead())
@@ -634,7 +648,11 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
 
         wasOk4atfr = wait4doubleOk(false, false);
 
+        emit currentOperation(tr("for wasOk4atfr =%1, stopAll=%2").arg(int(wasOk4atfr)).arg(int(stopAll)));
         if(!wasOk4atfr){
+
+            QThread::msleep(5);
+
             exitCommandModeSimple();
             wasOk4atfr = true;
         }
@@ -647,6 +665,10 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
     if(lModemState.modemIsOverRS485)
         return true;
 #endif
+
+    emit currentOperation(tr("!for wasOk4atfr =%1, stopAll=%2").arg(int(wasOk4atfr)).arg(int(stopAll)));
+
+
     if(!wasOk4atfr)
         return false;
 
@@ -826,6 +848,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                         readArr.append(readDevice());
                         if(readArr.contains("OK\r\n") || readArr.contains("ERROR\r\n") || stopAll)
                             break;
+                        QThread::msleep(11);
                     }
                     emit currentOperation(QString("atdb out '%1'").arg(QString("r=%1, h=%2").arg(QString(readArr.simplified())).arg(QString(readArr.toHex()))));
 
@@ -863,6 +886,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                 while(time.elapsed() < 11000 && readArr != "OK\r\n" && !stopAll)
                     readArr.append(readDevice().toUpper());
 
+
                 if(!readArr.contains("OK\r\n")){
                     emit currentOperation(tr("Couldn't set up the modem"));
                     lSleep(6666);
@@ -871,13 +895,14 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
 
             }
 
-            emit currentOperation(QString("The %1 mode is %2.").arg(apiPlus ? "API+" : "API").arg(enable ? "enabled" : "disabled"));
+            emit currentOperation(tr("The %1 mode is %2.").arg(apiPlus ? "API+" : "API").arg(enable ? "enabled" : "disabled"));
 
 
             if(readAboutZigBee && !aboutModem.isEmpty()){
                 setAtmdValueFromString(aboutModem.value("ATMD").toString());
 
-                aboutModem = conf2modemHelper::aboutZigBeeModem2humanReadable(aboutModem);
+
+                //for test only aboutModem = conf2modemHelper::aboutZigBeeModem2humanReadable(aboutModem);
                 if(!aboutModem.isEmpty()){
                     emit onAboutZigBee(addCurrentDate2aboutModem(aboutModem));
                 }
@@ -917,6 +942,8 @@ bool Conf2modem::isCoordinatorGood(const bool &forced, const bool &readAboutZigB
         lModemState.apiErrCounter = 0;
         lModemState.msecWhenCoordinatorWasGood = QDateTime::currentMSecsSinceEpoch();
 
+    }else{
+        emit currentOperation(tr("The API mode is not active, isCoordinatorConfigReady=%1").arg(lModemState.isCoordinatorConfigReady));
     }
 
 

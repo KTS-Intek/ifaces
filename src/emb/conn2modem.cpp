@@ -102,7 +102,7 @@ bool Conn2modem::isConnectionWorks()
     switch(lastConnectionType){
 
 #ifndef DISABLE_SERIALPORT_MODE
-    case IFACECONNTYPE_UART     : if(need2closeSerial) closeSerialPort(); r = serialPort->isOpen(); break;
+    case IFACECONNTYPE_UART     : if(need2closeSerial){ emit currentOperation("need2closeSerial isConnectionWorks "); closeSerialPort();} r = serialPort->isOpen(); break;
 #endif
 #ifndef DISABLE_TCPCLIENT_MODE
     case IFACECONNTYPE_TCPCLNT  : r = isTcpConnectionWorks(socket); break;
@@ -572,13 +572,13 @@ bool Conn2modem::openSerialPort(const QString &portName, const qint32 &baudRate,
 
 
     if(!r){
-        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection err=%1").arg(mess));
-        emit currentOperation(tr("Couldn't connect to the remote device. %1").arg(mess));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
+        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openSerialPort err=%1").arg(mess));
+        emit currentOperation(tr("Couldn't connect to the serial port. %1").arg(mess));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
         closeDevice();
     }else{
         connectionDownCounter = 0;
         ifaceName = serialPort->portName();
-        emit currentOperation(tr("Connection to the remote device was established)"));
+        emit currentOperation(tr("Connection to the serial port was established)"));
 
     }
 
@@ -991,6 +991,7 @@ void Conn2modem::closeSerialPort() //only if the port was disconnected not by th
     emit onConnectionClosed();
 }
 
+
 void Conn2modem::closeSerialPortDirect()
 {
     need2closeSerial = true;
@@ -1082,6 +1083,9 @@ void Conn2modem::createDevices()
 #endif
 
     serialPort = new QSerialPort(this);
+
+
+    need2closeSerial = false;
     CheckCurrPort *checkPort = new CheckCurrPort(this);
 
     connect(checkPort, SIGNAL(portDisconnected(bool)), this, SLOT(closeSerialPortDirect()), Qt::DirectConnection);
@@ -1092,6 +1096,8 @@ void Conn2modem::createDevices()
     connect(this, SIGNAL(stopCheckCurrPort()), checkPort, SLOT(terminate()) );
     connect(this, SIGNAL(onConnectionDown()), checkPort, SLOT(terminate()) );
     connect(this, SIGNAL(onSerialPortOpened(QString)), checkPort, SLOT(zapuskalka(QString)) );
+
+//    connect(checkPort, &CheckCurrPort::appendMessage, this, &Conn2modem::currentOperation); //it is only for bugs
 
 #endif
 }

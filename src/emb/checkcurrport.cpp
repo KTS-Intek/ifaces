@@ -1,9 +1,6 @@
 #include "checkcurrport.h"
-#if QT_VERSION >= 0x050000
 #include <QSerialPortInfo>
-#else
-#include <QtAddOnSerialPort/serialportinfo.h>
-#endif
+
 
 #include <QFileInfo>
 #include <QDateTime>
@@ -20,6 +17,11 @@ void CheckCurrPort::zapuskalka(QString currPort)
     this->currPort=currPort;   
     this->start();
 }
+
+void CheckCurrPort::sendMessageWithAtimeStamp(QString message)
+{
+    emit appendMessage(QString("%1 %2").arg(QTime::currentTime().toString("hh:mm:ss.zzz")).arg(message));
+}
 //==================================================================================================
 void CheckCurrPort::run()
 {
@@ -35,22 +37,29 @@ void CheckCurrPort::run()
             dt = fi.created();
     }
 
+
+    sendMessageWithAtimeStamp(tr("Start checking %1").arg(currPort));
     while(true){
+
+        sendMessageWithAtimeStamp(tr("New loop %1").arg(currPort));
+
         msleep(1500/counter);
         bool found=false;
-    #if QT_VERSION >= 0x050000
         foreach (const QSerialPortInfo &info, QSerialPortInfo::availablePorts()){
-    #else
-        foreach (const SerialPortInfo &info, SerialPortInfo::availablePorts()){
-    #endif
+
             if(info.portName() == currPort){
                 found = true;
 
 
                 if(!info.isBusy()){
+                    sendMessageWithAtimeStamp(tr("!isBusy %1, info.isBusy='%2', description='%3'").arg(currPort).arg(int(info.isBusy())).arg( info.description()));
+
                     emit portDisconnected(1);
                     counter++;
                     if(counter > 2){
+                        sendMessageWithAtimeStamp(tr("!isBusy %1, info.isBusy='%2', description='%3', terminateNow").arg(currPort).arg(int(info.isBusy())).arg( info.description()));
+
+
                         counter = 2;
                         emit terminateNow();
                     }
@@ -59,19 +68,25 @@ void CheckCurrPort::run()
             }
        }
         if(!found){
+            sendMessageWithAtimeStamp(tr("!found %1").arg(currPort));
 
             QFileInfo fi(currPort);
             if(fi.exists() && (!dt.isValid() || (fi.created() == dt && dt.isValid())))
                 continue;
 
+            sendMessageWithAtimeStamp(tr("!found %1, fi.exists='%2', created='%3'").arg(currPort).arg(int(fi.exists())).arg( fi.created().toString("hh:mm:ss")));
+
              emit portDisconnected(true);
             counter++;
             if(counter > 2){
                 counter = 2;
+                sendMessageWithAtimeStamp(tr("!found %1, fi.exists='%2', created='%3', terminateNow").arg(currPort).arg(int(fi.exists())).arg( fi.created().toString("hh:mm:ss")));
+
                 emit terminateNow();
             }
         }
     }
+
 //    QTimer timer;
 //    connect(&timer, SIGNAL(timeout()), SLOT(onTimerTimeOut()) );
 //    timer.start(1500);

@@ -26,9 +26,13 @@ public:
 signals:
     void portDisconnected(bool);
     void terminateNow();
+
+    void appendMessage(QString message);
     
 public slots:
     void zapuskalka(QString currPort);
+
+    void sendMessageWithAtimeStamp(QString message);
 
     
 protected:
