@@ -1,5 +1,6 @@
 #include "conf2modem.h"
 #include <QTime>
+#include <QThread>
 
 #include "conf2modemhelper.h"
 #include "embeelimits.h"
@@ -902,8 +903,9 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                 setAtmdValueFromString(aboutModem.value("ATMD").toString());
 
 
-                //for test only aboutModem = conf2modemHelper::aboutZigBeeModem2humanReadable(aboutModem);
+                aboutModem = conf2modemHelper::aboutZigBeeModem2humanReadable(aboutModem);
                 if(!aboutModem.isEmpty()){
+                    aboutModem.insert("app", QString(MYAPPNAME));
                     emit onAboutZigBee(addCurrentDate2aboutModem(aboutModem));
                 }
             }

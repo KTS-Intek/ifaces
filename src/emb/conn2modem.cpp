@@ -1096,7 +1096,6 @@ void Conn2modem::createDevices()
     connect(this, SIGNAL(stopCheckCurrPort()), checkPort, SLOT(terminate()) );
     connect(this, SIGNAL(onConnectionDown()), checkPort, SLOT(terminate()) );
     connect(this, SIGNAL(onSerialPortOpened(QString)), checkPort, SLOT(zapuskalka(QString)) );
-
 //    connect(checkPort, &CheckCurrPort::appendMessage, this, &Conn2modem::currentOperation); //it is only for bugs
 
 #endif
