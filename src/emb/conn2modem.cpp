@@ -61,7 +61,7 @@ bool Conn2modem::isBlockByPrtt() const
         #ifdef HASGUI4USR
             false
         #else
-                    lModemState.uartBlockPrtt
+             (lModemState.isMainConnectionUsed ? lModemState.uartBlockPrtt : false)
         #endif
 
             ;
@@ -74,16 +74,16 @@ bool Conn2modem::isUartBusy() const
     return (lModemState.directAccess
 
 #ifndef HASGUI4USR
-            || lModemState.uartBlockPrtt
+            || (lModemState.isMainConnectionUsed ? lModemState.uartBlockPrtt : false)
 #endif
             );
 }
-
+//-------------------------------------------------------------------------------------
 int Conn2modem::getMaxDataFromModem()
 {
     return (maxDataFromModem < 1 || maxDataFromModem > 5000) ? MAX_READ_FROM_UART : maxDataFromModem;
 }
-
+//-------------------------------------------------------------------------------------
 void Conn2modem::setMaxDataFromModem(const int &bytes)
 {
     maxDataFromModem = bytes;
@@ -105,10 +105,10 @@ bool Conn2modem::isConnectionWorks()
     case IFACECONNTYPE_UART     : if(need2closeSerial){ emit currentOperation("need2closeSerial isConnectionWorks "); closeSerialPort();} r = serialPort->isOpen(); break;
 #endif
 #ifndef DISABLE_TCPCLIENT_MODE
-    case IFACECONNTYPE_TCPCLNT  : r = isTcpConnectionWorks(socket); break;
+    case IFACECONNTYPE_TCPCLNT  : r = isTcpConnectionWorks(socket)  ; break;
 #endif
 #ifndef DISABLE_M2M_MODULE
-    case IFACECONNTYPE_M2MCLNT  : r = svahaConnector->isOpen(); break;
+    case IFACECONNTYPE_M2MCLNT  : r = svahaConnector->isOpen()      ; break;
 #endif
 
     }
@@ -283,18 +283,20 @@ bool Conn2modem::waitForReadyRead(const int &msecs)
 {
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
+    bool r = false;
     switch(lastConnectionType){
 #ifndef DISABLE_SERIALPORT_MODE
-    case IFACECONNTYPE_UART     : return serialPort->waitForReadyRead(msecs);
+    case IFACECONNTYPE_UART     : r = serialPort->waitForReadyRead(msecs)   ; break;
 #endif
 #ifndef DISABLE_TCPCLIENT_MODE
-    case IFACECONNTYPE_TCPCLNT  : return socket->waitForReadyRead(msecs);
+    case IFACECONNTYPE_TCPCLNT  : r = socket->waitForReadyRead(msecs)       ; break;
 #endif
 #ifndef DISABLE_M2M_MODULE
-    case IFACECONNTYPE_M2MCLNT  : return svahaConnector->waitForReadyRead(msecs);
+    case IFACECONNTYPE_M2MCLNT  : r = svahaConnector->waitForReadyRead(msecs); break;
 #endif
+    default: r = false; break;
     }
-    return false ;
+    return r ;
 
 
 #else
@@ -307,18 +309,21 @@ bool Conn2modem::waitForReadyRead(const int &msecs)
 bool Conn2modem::waitForBytesWritten(const int &msecs)
 {
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
+
+    bool r = false;
     switch(lastConnectionType){
 #ifndef DISABLE_SERIALPORT_MODE
-    case IFACECONNTYPE_UART     : return serialPort->waitForBytesWritten(msecs);
+    case IFACECONNTYPE_UART     : r = serialPort->waitForBytesWritten(msecs)    ; break;
 #endif
 #ifndef DISABLE_TCPCLIENT_MODE
-    case IFACECONNTYPE_TCPCLNT  : return socket->waitForBytesWritten(msecs);
+    case IFACECONNTYPE_TCPCLNT  : r = socket->waitForBytesWritten(msecs)        ; break;
 #endif
 #ifndef DISABLE_M2M_MODULE
-    case IFACECONNTYPE_M2MCLNT  : return svahaConnector->waitForBytesWritten(msecs);
+    case IFACECONNTYPE_M2MCLNT  : r = svahaConnector->waitForBytesWritten(msecs); break;
 #endif
+    default: r = false; break;
     }
-    return false ;
+    return r ;
 
 
 #else
@@ -332,19 +337,20 @@ qint64 Conn2modem::bytesAvailable()
         return -1;
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
-
+    qint64 r = -1;
     switch(lastConnectionType){
 #ifndef DISABLE_SERIALPORT_MODE
-    case IFACECONNTYPE_UART     : return serialPort->bytesAvailable();
+    case IFACECONNTYPE_UART     : r = serialPort->bytesAvailable()      ; break;
 #endif
 #ifndef DISABLE_TCPCLIENT_MODE
-    case IFACECONNTYPE_TCPCLNT  : return socket->bytesAvailable();
+    case IFACECONNTYPE_TCPCLNT  : r = socket->bytesAvailable()          ; break;
 #endif
 #ifndef DISABLE_M2M_MODULE
-    case IFACECONNTYPE_M2MCLNT  : return svahaConnector->bytesAvailable();
+    case IFACECONNTYPE_M2MCLNT  : r = svahaConnector->bytesAvailable()  ; break;
 #endif
+    default: r = -2; break;
     }
-    return -1;
+    return r;
 
 
 #else
@@ -447,7 +453,7 @@ qint64 Conn2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAnd
 #ifdef DISABLE_UART_PRIORITY
     const qint64 len = write(writeArr);
 #else
-    const qint64 len = write(writePreffix + writeArr);// QByteArray::number(lastPeredavatorPrtt) + "; ;"
+    const qint64 len = write( (lModemState.isMainConnectionUsed ? writePreffix : QByteArray()) + writeArr);// QByteArray::number(lastPeredavatorPrtt) + "; ;"
 #endif
     if(lModemState.uartBlockPrtt)
         lModemState.lastCommandWasAtcn = (len > 0 && writeArr == "ATCN\r\n");
@@ -918,6 +924,8 @@ void Conn2modem::setTimeouts(int global, int block)
 
 void Conn2modem::incrementApiErrCounter()
 {
+    //it is not only for API errors, it is for all communication errors
+    //but you have to tell about connection type - main or additional
     lModemState.apiErrCounter++;
 
     if(lastConnectionType != IFACECONNTYPE_UNKN && lModemState.apiErrCounter > MAX_TRIES_FOR_CONFIG){
@@ -925,17 +933,25 @@ void Conn2modem::incrementApiErrCounter()
     }
 
     emit onApiErrorIncremented(lModemState.apiErrCounter);
-    emit currentOperation(tr("Couldn't activate the API mode, counter: %1").arg(lModemState.apiErrCounter));
+    emit currentOperation(tr("Exchange error, counter: %1, can reset the coordinator: %2").arg(lModemState.apiErrCounter).arg(int(lModemState.isMainConnectionUsed)));
+
+    if(!lModemState.isMainConnectionUsed){
+        return;
+    }
 
     if(lModemState.apiErrCounter > MAX_TRIES_FOR_HARD_RESET){
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem incrementApiErrCounter directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, apiErrCounter=%4")
                                                      .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(lModemState.apiErrCounter));
+
+        emit currentOperation(tr("Exchange error, resetting the coordinator"));
 
         lModemState.apiErrCounter = 0;//обнуляю щоб не дуже часто скидало координатора
         emit resetCoordinatorRequest();
     }else if(lModemState.apiErrCounter > MAX_TRIES_FOR_CONFIG){
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem incrementApiErrCounter directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, apiErrCounter=%4")
                                                      .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(lModemState.apiErrCounter));
+
+        emit currentOperation(tr("Exchange error, killing the TcpToEmbee service"));
         emit killPeredavatorRequest();
     }
 }
@@ -1148,18 +1164,20 @@ qint64 Conn2modem::write(const QByteArray &arr)
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
     emit onReadWriteOperation(false);
 
+    qint64 r = -1;
     switch(lastConnectionType){
 #ifndef DISABLE_SERIALPORT_MODE
-    case IFACECONNTYPE_UART     : return serialPort->write(arr);
+    case IFACECONNTYPE_UART     : r = serialPort->write(arr);
 #endif
 #ifndef DISABLE_TCPCLIENT_MODE
-    case IFACECONNTYPE_TCPCLNT  : return socket->write(arr);
+    case IFACECONNTYPE_TCPCLNT  : r = socket->write(arr);
 #endif
 #ifndef DISABLE_M2M_MODULE
-    case IFACECONNTYPE_M2MCLNT  : return svahaConnector->write(arr);
+    case IFACECONNTYPE_M2MCLNT  : r = svahaConnector->write(arr);
 #endif
+    default: r = -2; break;
     }
-    return -1;
+    return r;
 
 
 #else

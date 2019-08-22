@@ -49,8 +49,10 @@ struct IfaceParams
     QString lastIfaceParams;
     Conf2modem *confModemHelper;
     quint16 closeConnLater;
-    bool niRecover;
-    IfaceParams() : closeConnLater(0), niRecover(false) {}
+//    bool niRecover; moved to connSett.try2recoverNI
+
+
+    IfaceParams() : closeConnLater(0) {}
 } ;
 
 

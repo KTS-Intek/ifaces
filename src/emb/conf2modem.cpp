@@ -68,6 +68,13 @@ Conf2modem::RezUpdateConnSettings Conf2modem::convertFromVarMapExt(const QVarian
     connSett.timeOutG = interfaceSettings.value("timeoutMsec", 11000).toInt();
     connSett.timeOutB = interfaceSettings.value("blockTimeout", 300).toInt();
 
+//    ui->cbxUnknownPrtcl->setChecked(h.value("unknownProtocolAsData").toBool());
+//    ui->cbxRecoverNI->setChecked(h.value("recoverNI").toBool());
+//    ui->cbxDisableAPIprocessing->setChecked(h.value("disableAPImode").toBool());
+
+    connSett.try2recoverNI = interfaceSettings.value("recoverNI").toBool();// try2recoverNI;
+    connSett.unknownProtocolAsData = interfaceSettings.value("unknownProtocolAsData").toBool();
+    connSett.disableAPImode = interfaceSettings.value("disableAPImode").toBool();
 
     return Conf2modem::RezUpdateConnSettings(connSett, ifaceParams);
 }
@@ -934,6 +941,7 @@ bool Conf2modem::isCoordinatorGood(const bool &forced, const bool &readAboutZigB
         return lModemState.isCoordinatorConfigReady;
 
     qDebug() << "isCoordinatorGood " << qAbs(lModemState.msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) << MAX_MSEC_FOR_COORDINATOR_READY ;
+
 
     lModemState.isCoordinatorConfigReady = false;
     if(enableDisableApi(true, readAboutZigBee)){

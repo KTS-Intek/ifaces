@@ -27,4 +27,12 @@
 #define MAX_READ_TO 120000
 
 
+
+#define IFACE_CHANNEL_MAIN  0
+#define IFACE_CHANNEL_GROUP 1
+#define IFACE_CHANNEL_FIRST 2
+#define IFACE_CHANNEL_LAST  101
+#define IFACE_CHANNEL_DEF   IFACE_CHANNEL_GROUP //it is for compatibility with quick-collect input meter to iface settings
+
+
 #endif // IFACEEXCHANGETYPESDEFS_H

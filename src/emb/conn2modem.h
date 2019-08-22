@@ -82,9 +82,10 @@ public:
 
         qint64 lastWriteLen;
 
+        bool isMainConnectionUsed; //it indicates that main/additional connection is used
         LastModemState() :
             lastAtmdValue(-1), atmd2write(-1), directAccess(false), uartBlockPrtt(false), isCoordinatorConfigReady(false),
-            apiErrCounter(0), msecWhenCoordinatorWasGood(0), lastCommandWasAtcn(false), modemIsOverRS485(false), lastWriteLen(-1) {}
+            apiErrCounter(0), msecWhenCoordinatorWasGood(0), lastCommandWasAtcn(false), modemIsOverRS485(false), lastWriteLen(-1), isMainConnectionUsed(true) {}
     } lModemState;
 
 #ifndef DISABLE_TCPCLIENT_MODE
