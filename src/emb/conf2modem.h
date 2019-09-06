@@ -42,6 +42,8 @@ public:
 
     bool enterCommandMode();
 
+    bool isCommandModeAnswer(const QByteArray &readArr);
+
     bool networkReset(QString &errStr);
 
     bool resetAmodem(QString &errStr);

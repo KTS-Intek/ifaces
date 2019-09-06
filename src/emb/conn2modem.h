@@ -74,7 +74,8 @@ public:
 
         bool isCoordinatorConfigReady;
         quint8 apiErrCounter;
-        qint64 msecWhenCoordinatorWasGood;
+//        qint64 msecWhenCoordinatorWasGood;
+        QHash<QString,qint64> hashMsecWhenCoordinatorWasGood;
 
         bool lastCommandWasAtcn;
 
@@ -85,7 +86,7 @@ public:
         bool isMainConnectionUsed; //it indicates that main/additional connection is used
         LastModemState() :
             lastAtmdValue(-1), atmd2write(-1), directAccess(false), uartBlockPrtt(false), isCoordinatorConfigReady(false),
-            apiErrCounter(0), msecWhenCoordinatorWasGood(0), lastCommandWasAtcn(false), modemIsOverRS485(false), lastWriteLen(-1), isMainConnectionUsed(true) {}
+            apiErrCounter(0), lastCommandWasAtcn(false), modemIsOverRS485(false), lastWriteLen(-1), isMainConnectionUsed(true) {}
     } lModemState;
 
 #ifndef DISABLE_TCPCLIENT_MODE

@@ -19,7 +19,6 @@ Conn2modem::Conn2modem(const int &dbgExtSrcId, const bool &verboseMode, QObject 
     setMaxDataFromModem(0);//use defined value
     writePrtt = 0;
     lModemState.apiErrCounter = 0;
-    lModemState.msecWhenCoordinatorWasGood = 0;
 
 }
 
@@ -684,7 +683,7 @@ void Conn2modem::lSleep(const int &msleep)
     time.start();
     if(isConnectionWorks()){
         for(int i = msleep > 10 ? 10 : msleep; i < msleep && isConnectionWorks() && time.elapsed() < msleep; i += 10)
-            readDevice();
+            readDeviceQuick("\r\n", true);
     }else{
         for(int i = msleep > 10 ? 10 : msleep; i < msleep && time.elapsed() < msleep; i += 10)
             QThread::msleep(10);
@@ -1128,7 +1127,7 @@ void Conn2modem::onDeviceDestr()
 
     lModemState.directAccess = lModemState.uartBlockPrtt = false;
 
-    if(qAbs(lModemState.msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) > MAX_MSEC_FOR_COORDINATOR_READY)
+    if(qAbs(lModemState.hashMsecWhenCoordinatorWasGood.value(ifaceName, 0) - QDateTime::currentMSecsSinceEpoch()) > MAX_MSEC_FOR_COORDINATOR_READY)
         lModemState.isCoordinatorConfigReady = false;
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES

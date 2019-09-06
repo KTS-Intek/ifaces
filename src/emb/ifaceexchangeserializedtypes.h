@@ -32,18 +32,20 @@ struct ZbyrConnSett
     bool try2recoverNI;
     bool unknownProtocolAsData;
     bool disableAPImode;
+    bool forceHrdAddrsn;
 
 
-    ZbyrConnSett() : connectionType(1), prdvtrPort(8989), timeOutB(100), timeOutG(1000), try2recoverNI(true), unknownProtocolAsData(true), disableAPImode(false) {}
+    ZbyrConnSett() : connectionType(1), prdvtrPort(8989), timeOutB(100), timeOutG(1000),
+        try2recoverNI(true), unknownProtocolAsData(true), disableAPImode(false), forceHrdAddrsn(false) {}
 
     ZbyrConnSett( const QString &prdvtrAddr, const qint32 &prdvtrPort, const qint32 &timeOutB, const qint32 &timeOutG) :
         connectionType(1), prdvtrAddr(prdvtrAddr), prdvtrPort(prdvtrPort), timeOutB(timeOutB), timeOutG(timeOutG),
-        try2recoverNI(true), unknownProtocolAsData(true), disableAPImode(false){}
+        try2recoverNI(true), unknownProtocolAsData(true), disableAPImode(false), forceHrdAddrsn(false) {}
 
     ZbyrConnSett(const quint8 &connectionType, const QString &prdvtrAddr, const qint32 &prdvtrPort, const qint32 &timeOutB, const qint32 &timeOutG, const QStringList &uarts,
-                 const QVariantHash &m2mhash, const bool &try2recoverNI, const bool &unknownProtocolAsData, const bool &disableAPImode) :
+                 const QVariantHash &m2mhash, const bool &try2recoverNI, const bool &unknownProtocolAsData, const bool &disableAPImode, const bool &forceHrdAddrsn) :
         connectionType(connectionType), prdvtrAddr(prdvtrAddr), prdvtrPort(prdvtrPort), timeOutB(timeOutB), timeOutG(timeOutG), uarts(uarts), m2mhash(m2mhash),
-        try2recoverNI(try2recoverNI), unknownProtocolAsData(unknownProtocolAsData), disableAPImode(disableAPImode) {}
+        try2recoverNI(try2recoverNI), unknownProtocolAsData(unknownProtocolAsData), disableAPImode(disableAPImode), forceHrdAddrsn(forceHrdAddrsn) {}
 };
 
 //лише те що стосується опитування поточного лічильника

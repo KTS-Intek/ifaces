@@ -75,6 +75,7 @@ Conf2modem::RezUpdateConnSettings Conf2modem::convertFromVarMapExt(const QVarian
     connSett.try2recoverNI = interfaceSettings.value("recoverNI").toBool();// try2recoverNI;
     connSett.unknownProtocolAsData = interfaceSettings.value("unknownProtocolAsData").toBool();
     connSett.disableAPImode = interfaceSettings.value("disableAPImode").toBool();
+    connSett.forceHrdAddrsn = interfaceSettings.value("forceHrdAddrsn").toBool();
 
     return Conf2modem::RezUpdateConnSettings(connSett, ifaceParams);
 }
@@ -170,7 +171,7 @@ bool Conf2modem::enterCommandMode()
 #ifdef HASGUI4USR
     lModemState.modemIsOverRS485 = (readArr == "O\r\n");
 #endif
-    for( int retry = 0, odyRaz = 0; retry < 7 && readArr.left(7).toUpper() != "OKERROR" && readArr.left(5).toUpper() != "ERROR" ; retry++) {//zminyty symvoly vhody v comandnyj rejym
+    for( int retry = 0, odyRaz = 0; retry < 7 && !isCommandModeAnswer(readArr) ; retry++) {//zminyty symvoly vhody v comandnyj rejym
 
         if(sayGoodByeIfUartIsNFree("enterCommandMode 3645 ", 555))
             return false;
@@ -188,11 +189,15 @@ bool Conf2modem::enterCommandMode()
             }
         }else{
             if(readArr.left(7).toUpper() != "OKERROR" && (readArr.left(2).toUpper() == "OK" || readArr.left(3).toUpper() == "O\r\n" || readArr.left(3).toUpper() == "K\r\n")){
-                retry--;
+                retry--;//rs485 and 115200 baud
             }
         }
         if(sayGoodByeIfUartIsNFree("directAccess 3654 ", 555))
             return false;
+
+        readArr = readAll();//just quick read, it can contains the data
+        if(isCommandModeAnswer(readArr))
+            break;
 
 
         write2dev(dataP);
@@ -213,7 +218,12 @@ bool Conf2modem::enterCommandMode()
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem enterCommandMode 3643 directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, readArr=%4, isEntered=%5")
                           .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(QString(readArr.toHex())).arg((bool)(readArr.left(7).toUpper() == "OKERROR" || readArr.left(5).toUpper() == "ERROR")));
 
-    return (readArr.left(7).toUpper() == "OKERROR" || readArr.left(5).toUpper() == "ERROR");
+    return isCommandModeAnswer(readArr);
+}
+
+bool Conf2modem::isCommandModeAnswer(const QByteArray &readArr)
+{
+    return (readArr.startsWith("OKERROR") || readArr.startsWith("ERROR"));
 }
 
 
@@ -620,7 +630,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem enableDisableApi a directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, lModemState.apiErrCounter=%4, readAboutZigBee=%5")
                           .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(lModemState.apiErrCounter).arg(int(readAboutZigBee)));
 
-    bool wasOk4atfr = false;
+    bool wasOk4atfr = false, wasOk4atfrFunction = false;
     for(int i = 0; i < 3 && !breakNow; i++){
         emit currentOperation(tr("API enbl=%1, prtt=%2, rtr=%3").arg(enable).arg(QString(writePreffix)).arg(i));
         if(verboseMode)
@@ -654,12 +664,12 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
         writeATcommand("ATFR");
 //        readDevice();
 
-        wasOk4atfr = wait4doubleOk(false, false);
+        wasOk4atfr = wasOk4atfrFunction = wait4doubleOk(false, false);
 
         emit currentOperation(tr("for wasOk4atfr =%1, stopAll=%2").arg(int(wasOk4atfr)).arg(int(stopAll)));
         if(!wasOk4atfr){
 
-            QThread::msleep(5);
+            QThread::sleep(5);
 
             exitCommandModeSimple();
             wasOk4atfr = true;
@@ -689,7 +699,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
         if(stopAll)
             return false;
 
-        if(i < 1 && wasOk4atfr){
+        if(i < 1 && !wasOk4atfrFunction){//function has returned false - so I need to one more read
             readDeviceQuick("\r\n", true);
         }else{
             if(!isCoordinatorFreeWithRead())
@@ -903,7 +913,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
 
             }
 
-            emit currentOperation(tr("The %1 mode is %2.").arg(apiPlus ? "API+" : "API").arg(enable ? "enabled" : "disabled"));
+            emit currentOperation(tr("The %1 mode was %2.").arg(apiPlus ? "API+" : "API").arg(enable ? "enabled" : "disabled"));
 
 
             if(readAboutZigBee && !aboutModem.isEmpty()){
@@ -937,23 +947,23 @@ bool Conf2modem::isCoordinatorGood(const bool &forced, const bool &readAboutZigB
 #endif
 
 
-    if(!forced && lModemState.isCoordinatorConfigReady && qAbs(lModemState.msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) < MAX_MSEC_FOR_COORDINATOR_READY )
+    if(!forced && lModemState.isCoordinatorConfigReady && qAbs(lModemState.hashMsecWhenCoordinatorWasGood.value(ifaceName) - QDateTime::currentMSecsSinceEpoch()) < MAX_MSEC_FOR_COORDINATOR_READY )
         return lModemState.isCoordinatorConfigReady;
 
-    qDebug() << "isCoordinatorGood " << qAbs(lModemState.msecWhenCoordinatorWasGood - QDateTime::currentMSecsSinceEpoch()) << MAX_MSEC_FOR_COORDINATOR_READY ;
+    qDebug() << "isCoordinatorGood " << qAbs(lModemState.hashMsecWhenCoordinatorWasGood.value(ifaceName) - QDateTime::currentMSecsSinceEpoch()) << MAX_MSEC_FOR_COORDINATOR_READY ;
 
 
     lModemState.isCoordinatorConfigReady = false;
     if(enableDisableApi(true, readAboutZigBee)){
-        emit currentOperation(tr("The API mode is active"));
+        emit currentOperation(tr("The API mode was activated"));
 
         emit onApiModeEnabled();
         lModemState.isCoordinatorConfigReady = true;
         lModemState.apiErrCounter = 0;
-        lModemState.msecWhenCoordinatorWasGood = QDateTime::currentMSecsSinceEpoch();
+        lModemState.hashMsecWhenCoordinatorWasGood.insert(ifaceName, QDateTime::currentMSecsSinceEpoch());
 
     }else{
-        emit currentOperation(tr("The API mode is not active, isCoordinatorConfigReady=%1").arg(lModemState.isCoordinatorConfigReady));
+        emit currentOperation(tr("Couldn't activate the API mode, isCoordinatorConfigReady=%1, interface '%2'").arg(lModemState.isCoordinatorConfigReady).arg(ifaceName));
     }
 
 
