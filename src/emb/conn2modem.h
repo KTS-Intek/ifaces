@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QIODevice>
 #include <QStringList>
+#include <QHash>
 
 #ifndef DISABLE_TCPCLIENT_MODE
 #include <QTcpSocket>

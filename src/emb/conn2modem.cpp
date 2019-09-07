@@ -1166,13 +1166,13 @@ qint64 Conn2modem::write(const QByteArray &arr)
     qint64 r = -1;
     switch(lastConnectionType){
 #ifndef DISABLE_SERIALPORT_MODE
-    case IFACECONNTYPE_UART     : r = serialPort->write(arr);
+    case IFACECONNTYPE_UART     : r = serialPort->write(arr); break;
 #endif
 #ifndef DISABLE_TCPCLIENT_MODE
-    case IFACECONNTYPE_TCPCLNT  : r = socket->write(arr);
+    case IFACECONNTYPE_TCPCLNT  : r = socket->write(arr); break;
 #endif
 #ifndef DISABLE_M2M_MODULE
-    case IFACECONNTYPE_M2MCLNT  : r = svahaConnector->write(arr);
+    case IFACECONNTYPE_M2MCLNT  : r = svahaConnector->write(arr); break;
 #endif
     default: r = -2; break;
     }
