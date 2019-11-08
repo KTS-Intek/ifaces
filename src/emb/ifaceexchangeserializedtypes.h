@@ -35,6 +35,12 @@ struct ZbyrConnSett
     bool forceHrdAddrsn;
 
 
+    qint8 databits;
+    qint8 stopbits;
+    qint8 parity;
+    qint8 flowcontrol;
+
+
     ZbyrConnSett() : connectionType(1), prdvtrPort(8989), timeOutB(100), timeOutG(1000),
         try2recoverNI(true), unknownProtocolAsData(true), disableAPImode(false), forceHrdAddrsn(false) {}
 

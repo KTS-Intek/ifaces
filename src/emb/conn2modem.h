@@ -57,6 +57,7 @@ public:
 
     bool verboseMode;
     bool stopAll;
+    bool lastConnState;
 
     DeviceTimeouts timeouts;
 
@@ -124,9 +125,9 @@ public:
 
     void setMaxDataFromModem(const int &bytes);
 
-    bool isConnectionWorks();
+    bool isConnectionWorking();
 
-    bool isConnectionWorks(int waitMsec);
+    bool isConnectionWorking(int waitMsec);
 #ifndef DISABLE_TCPCLIENT_MODE
 
     bool isTcpConnectionWorks(QTcpSocket *socket);
@@ -169,12 +170,12 @@ public:
 #endif
 
 #ifndef DISABLE_SERIALPORT_MODE
-    bool openSerialPort(const QString &portName, const qint32 &baudRate, const QStringList &uarts);
+    bool openSerialPort(const QString &portName, const qint32 &baudRate, const QStringList &uarts, const qint8 &databits, const qint8 &stopbits, const qint8 &parity, const qint8 &flowcontrol);
 
-    bool findModemOnPort(QString defPortName, qint32 baudR, QStringList uarts, QString &lastError);
+    bool findModemOnPort(QString defPortName, qint32 baudR, QStringList uarts, QString &lastError, const qint8 &databits, const qint8 &stopbits, const qint8 &parity, const qint8 &flowcontrol);
 
     bool openSerialPortExt(const QString &portName, const qint32 &baudRate, const QSerialPort::DataBits &data, const QSerialPort::StopBits &stopbits, const QSerialPort::Parity &parity,
-                           const QSerialPort::FlowControl &flow, const bool &ignoreUartsChecks, QString lastuarterr);
+                           const QSerialPort::FlowControl &flow, const bool &ignoreUartsChecks, QString &lastuarterr);
     bool request2modemOn();
 #endif
 

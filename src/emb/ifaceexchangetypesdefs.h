@@ -34,5 +34,8 @@
 #define IFACE_CHANNEL_LAST  101
 #define IFACE_CHANNEL_DEF   IFACE_CHANNEL_GROUP //it is for compatibility with quick-collect input meter to iface settings
 
+#define DEF_SETT_TCP_MEDIUM_SERVER_PENDING_CONN 10
+#define DEF_SETT_TCP_MEDIUM_SERVER_ZOMBIE_SEC   60
+
 
 #endif // IFACEEXCHANGETYPESDEFS_H

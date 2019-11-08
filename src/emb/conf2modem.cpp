@@ -8,7 +8,7 @@
 ///[!] type-converter
 #include "src/base/convertatype.h"
 #include "src/shared/embeedefaultreadcommandlist.h"
-
+#include "src/base/valuevalidator.h"
 
 //-------------------------------------------------------------------------------------
 
@@ -77,6 +77,11 @@ Conf2modem::RezUpdateConnSettings Conf2modem::convertFromVarMapExt(const QVarian
     connSett.disableAPImode = interfaceSettings.value("disableAPImode").toBool();
     connSett.forceHrdAddrsn = interfaceSettings.value("forceHrdAddrsn").toBool();
 
+    connSett.databits = ValueValidator::validateIntegerRange("databits", interfaceSettings, 8, 5, 8);
+    connSett.stopbits = ValueValidator::validateIntegerRange("stopbits", interfaceSettings, 1, 1, 2);
+    connSett.parity = ValueValidator::validateIntegerRange("parity", interfaceSettings, 0, 0, 2);
+    connSett.flowcontrol = ValueValidator::validateIntegerRange("flow", interfaceSettings, 0, 0, 4);
+
     return Conf2modem::RezUpdateConnSettings(connSett, ifaceParams);
 }
 //-------------------------------------------------------------------------------------
@@ -95,7 +100,7 @@ bool Conf2modem::openAconnection(const ZbyrConnSett &connSett, QString &connline
 #endif
 
 #ifndef DISABLE_SERIALPORT_MODE
-    case IFACECONNTYPE_UART : r = openSerialPort(connSett.prdvtrAddr, connSett.prdvtrPort, connSett.uarts); break;
+    case IFACECONNTYPE_UART : r = openSerialPort(connSett.prdvtrAddr, connSett.prdvtrPort, connSett.uarts, connSett.databits, connSett.stopbits, connSett.parity, connSett.flowcontrol); break;
 #endif
 
 #endif
@@ -119,7 +124,9 @@ bool Conf2modem::openAconnection(const ZbyrConnSett &connSett, QString &connline
 #endif
 #endif
         }
+
     }
+    lastConnState = r;
     return r;
 }
 
@@ -383,7 +390,7 @@ bool Conf2modem::nodeDiscovery(const int &totalModemCount, const qint64 &totalMs
 
     bool sayGoodByCoordinator = false;
 
-    for(int i = 0; !stopAll && isConnectionWorks() && i < 0xFFFFFFF && timeelapsed < timeout && modemReady < modemMaximum; i++){
+    for(int i = 0; !stopAll && isConnectionWorking() && i < 0xFFFFFFF && timeelapsed < timeout && modemReady < modemMaximum; i++){
 
         if(!wasInCommandMode){
             if(!enterCommandMode(opername))
@@ -643,8 +650,8 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
         }
 
 
-        if(!isConnectionWorks()){
-            emit currentOperation(tr("API enbl=%1, prtt=%2, rtr=%3 !isConnectionWorks").arg(enable).arg(QString(writePreffix)).arg(i));
+        if(!isConnectionWorking()){
+            emit currentOperation(tr("API enbl=%1, prtt=%2, rtr=%3 !isConnectionWorking").arg(enable).arg(QString(writePreffix)).arg(i));
 
             return false;
         }
@@ -705,7 +712,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
             if(!isCoordinatorFreeWithRead())
                 continue;
 
-            if(!isConnectionWorks())
+            if(!isConnectionWorking())
                 return false;
         }
         if(!enterCommandMode()){
