@@ -202,9 +202,9 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
             hasDataCounter++;
 
 #ifdef Q_OS_LINUX
-            if(verboseMode)
-        qDebug() << "readDevice wait4readyread " << time.elapsed() << timeouts.block << globalTime.elapsed() << timeouts.global << (readArr.isEmpty() || time.elapsed() < timeoutblock)
-                 << (globalTime.elapsed() < timeoutgeneral) ;
+//            if(verboseMode)
+//        qDebug() << "readDevice wait4readyread " << time.elapsed() << timeouts.block << globalTime.elapsed() << timeouts.global << (readArr.isEmpty() || time.elapsed() < timeoutblock)
+//                 << (globalTime.elapsed() < timeoutgeneral) ;
 #endif
         time.restart();
 
@@ -255,6 +255,27 @@ QByteArray Conn2modem::readDeviceQuick(const QByteArray &endSymb, const bool &is
 
     timeouts.global = isclearbufmode ? 60 : 300;
     timeouts.block = isclearbufmode ? 20 : 100;
+
+
+
+    if(!isclearbufmode && lastConnectionType != IFACECONNTYPE_UART && !lModemState.workWithoutAPI){
+
+        const int global = lModemState.lastWasATCNtest ? 300 : 3000;
+
+        if(lModemState.isMainConnectionUsed){
+#ifdef HASGUI4USR
+            timeouts.global = qMin(timeoutsl.global, global);
+#else
+            ;
+#endif
+        }else{
+
+            timeouts.global = qMin(timeoutsl.global, global);
+
+        }
+    }
+
+
 
 #ifdef DISABLE_QUICK_READMODE
     if(!isclearbufmode){
@@ -357,6 +378,11 @@ qint64 Conn2modem::bytesAvailable()
 #endif
 }
 
+QByteArray Conn2modem::clearBufferRead()
+{
+    return (bytesAvailable() > 0) ? readAll() : QByteArray();
+}
+
 //-------------------------------------------------------------------------------------
 
 QByteArray Conn2modem::readAll()
@@ -423,6 +449,8 @@ qint64 Conn2modem::write2dev(const QByteArray &writeArr)
 
 qint64 Conn2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAndPrtt)
 {
+    if(lModemState.lastWasATCNtest)
+        lModemState.lastWasATCNtest = false;
     if(verboseMode)
         qDebug() << "ZbyratorObject::write2dev " << lModemState.directAccess << writeArr.simplified() << writeArr.isEmpty() << writePreffix << lModemState.uartBlockPrtt;
 
@@ -454,10 +482,15 @@ qint64 Conn2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAnd
 #else
     const qint64 len = write( (lModemState.isMainConnectionUsed ? writePreffix : QByteArray()) + writeArr);// QByteArray::number(lastPeredavatorPrtt) + "; ;"
 #endif
+    const bool wasatcncommand = (len > 0 && writeArr == "ATCN\r\n");
     if(lModemState.uartBlockPrtt)
-        lModemState.lastCommandWasAtcn = (len > 0 && writeArr == "ATCN\r\n");
+        lModemState.lastCommandWasAtcn = wasatcncommand;
+
+    if(ignoreDaAndPrtt && wasatcncommand)
+        lModemState.lastWasATCNtest = true;
+
     if(verboseMode)
-        qDebug() << "ZbyratorObject::write2dev len=" << len << writePreffix << lModemState.lastCommandWasAtcn;
+        qDebug() << "ZbyratorObject::write2dev len=" << len << writePreffix << lModemState.lastCommandWasAtcn << lModemState.lastWasATCNtest;
 
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem write2dev directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, len=%4")
                                                  .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(len));
@@ -472,10 +505,10 @@ qint64 Conn2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAnd
 //-------------------------------------------------------------------------------------
 #ifndef DISABLE_TCPCLIENT_MODE
 
-bool Conn2modem::openTcpConnection(const QStringList &hosts, const QList<quint16> &ports)
+bool Conn2modem::openTcpConnection(const bool &workWithoutAPI, const QStringList &hosts, const QList<quint16> &ports)
 {
     for(int i = 0, imax = hosts.size(); i < imax; i++){
-        if(openTcpConnection(hosts.at(i), ports.at(i)))
+        if(openTcpConnection(workWithoutAPI, hosts.at(i), ports.at(i)))
             return true;
     }
     return false;
@@ -483,7 +516,7 @@ bool Conn2modem::openTcpConnection(const QStringList &hosts, const QList<quint16
 
 //-------------------------------------------------------------------------------------
 
-bool Conn2modem::openTcpConnection(const QString &host, const quint16 &port)
+bool Conn2modem::openTcpConnection(const bool &workWithoutAPI, const QString &host, const quint16 &port)
 {
     onDeviceDestr();//reset params
     lastConnectionType = IFACECONNTYPE_TCPCLNT;
@@ -498,6 +531,7 @@ bool Conn2modem::openTcpConnection(const QString &host, const quint16 &port)
 
     stopAll = false;
     socket->connectToHost(host, port);
+    lModemState.workWithoutAPI = workWithoutAPI;
 
     const bool r = socket->waitForConnected(wait4conn);
 
@@ -530,16 +564,17 @@ bool Conn2modem::openTcpConnection(const QString &host, const quint16 &port)
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
 #ifndef DISABLE_M2M_MODULE
-bool Conn2modem::openM2mConnection(const QVariantHash &oneProfile)
+bool Conn2modem::openM2mConnection(const bool &workWithoutAPI, const QVariantHash &oneProfile)
 {
     onDeviceDestr();//reset params
-
     emit openingAconnection();
     lastConnectionType = IFACECONNTYPE_M2MCLNT;
     stopAll = false;
 
     const int timeout = qMax(timeouts.global, 7000);
     svahaConnector->connect2hostViaSvaha(oneProfile, timeout, timeouts.block);
+    lModemState.workWithoutAPI = workWithoutAPI;
+
     const bool r = svahaConnector->waitForConnected(timeout);
     if(!r){
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection err=%1").arg(svahaConnector->errorString()));
@@ -563,13 +598,16 @@ bool Conn2modem::openM2mConnection(const QVariantHash &oneProfile)
 //-------------------------------------------------------------------------------------
 
 #ifndef DISABLE_SERIALPORT_MODE
-bool Conn2modem::openSerialPort(const QString &portName, const qint32 &baudRate, const QStringList &uarts, const qint8 &databits, const qint8 &stopbits, const qint8 &parity, const qint8 &flowcontrol)
+bool Conn2modem::openSerialPort(const bool &workWithoutAPI, const QString &portName, const qint32 &baudRate, const QStringList &uarts, const qint8 &databits, const qint8 &stopbits, const qint8 &parity, const qint8 &flowcontrol)
 {
+
     onDeviceDestr();//reset params
     emit openingAconnection();
     stopAll = false;
     lastConnectionType = IFACECONNTYPE_UART;
     QString mess;
+    lModemState.workWithoutAPI = workWithoutAPI;
+
     const bool r = (uarts.isEmpty() && !portName.isEmpty()) ?
                 findModemOnPort("", baudRate, portName.split("\n"), mess, databits, stopbits, parity, flowcontrol) : //manual mode
                 findModemOnPort(portName, baudRate, uarts, mess, databits, stopbits, parity, flowcontrol); //detection mode
@@ -619,7 +657,7 @@ bool Conn2modem::findModemOnPort(QString defPortName, qint32 baudR, QStringList 
     QString lastuarterr;
     for(int i = 0; i < 1000 && !uarts.isEmpty(); i++){
 
-        if(openSerialPortExt(uarts.takeFirst(), baudR, dataBits, stopBits, parityY, flowControl, ignoreUartsChecks, lastuarterr)){
+        if(openSerialPortExt(lModemState.workWithoutAPI, uarts.takeFirst(), baudR, dataBits, stopBits, parityY, flowControl, ignoreUartsChecks, lastuarterr)){
             lastError.clear();
             return true;
         }
@@ -631,7 +669,7 @@ bool Conn2modem::findModemOnPort(QString defPortName, qint32 baudR, QStringList 
     return false;
 }
 
-bool Conn2modem::openSerialPortExt(const QString &portName, const qint32 &baudRate, const QSerialPort::DataBits &data, const QSerialPort::StopBits &stopbits,
+bool Conn2modem::openSerialPortExt(const bool &workWithoutAPI, const QString &portName, const qint32 &baudRate, const QSerialPort::DataBits &data, const QSerialPort::StopBits &stopbits,
                                    const QSerialPort::Parity &parity, const QSerialPort::FlowControl &flow, const bool &ignoreUartsChecks, QString &lastuarterr)
 {
 
@@ -639,6 +677,8 @@ bool Conn2modem::openSerialPortExt(const QString &portName, const qint32 &baudRa
     emit currentOperation(tr("Trying to open %1").arg(portName));
     ifaceName = portName;
     serialPort->setPortName(portName);
+    lModemState.workWithoutAPI = workWithoutAPI;
+
     if(serialPort->open(QIODevice::ReadWrite)){
         if(serialPort->setBaudRate(baudRate) && serialPort->setParity(parity) && serialPort->setStopBits(stopbits) &&
                 serialPort->setDataBits(data) && serialPort->setFlowControl(flow)){
@@ -1033,18 +1073,16 @@ void Conn2modem::closeSerialPortDirect()
     emit need2closeSerialPort();
 }
 
+
+
 #endif
 #endif
 
-
-//-------------------------------------------------------------------------------------
-
-void Conn2modem::activateAsyncMode()
+void Conn2modem::activateAsyncModeExt(const quint8 &conntype)
 {
 
-
 #ifndef DISABLE_TCPCLIENT_MODE
-    if(lastConnectionType == IFACECONNTYPE_TCPCLNT)
+    if(conntype == IFACECONNTYPE_TCPCLNT || conntype == IFACECONNTYPE_UNKN)
         connect(socket, SIGNAL(readyRead()), this, SIGNAL(readyRead()) );
 #endif
 
@@ -1052,17 +1090,25 @@ void Conn2modem::activateAsyncMode()
 
 
 #ifndef DISABLE_M2M_MODULE
-    if(lastConnectionType == IFACECONNTYPE_M2MCLNT){
+    if(conntype == IFACECONNTYPE_M2MCLNT || conntype == IFACECONNTYPE_UNKN){
         connect(svahaConnector, SIGNAL(readyRead()), this, SIGNAL(readyRead()) );
         svahaConnector->setAsyncMode(true);
     }
 #endif
-    if(lastConnectionType == IFACECONNTYPE_UART){
+    if(conntype == IFACECONNTYPE_UART || conntype == IFACECONNTYPE_UNKN){
         connect(this, SIGNAL(detectedDisconnectedSerialPort()), this, SLOT(closeSerialPort()));
         connect(serialPort, SIGNAL(readyRead()), this, SIGNAL(readyRead()) );
     }
 
 #endif
+
+}
+
+//-------------------------------------------------------------------------------------
+
+void Conn2modem::activateAsyncMode()
+{
+    activateAsyncModeExt(lastConnectionType);
 
 }
 

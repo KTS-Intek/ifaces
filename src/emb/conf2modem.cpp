@@ -90,17 +90,17 @@ bool Conf2modem::openAconnection(const ZbyrConnSett &connSett, QString &connline
     bool r = false;
     switch(connSett.connectionType){
 #ifndef DISABLE_TCPCLIENT_MODE
-    case IFACECONNTYPE_TCPCLNT: r = openTcpConnection(connSett.prdvtrAddr, connSett.prdvtrPort); break;
+    case IFACECONNTYPE_TCPCLNT: r = openTcpConnection(connSett.disableAPImode, connSett.prdvtrAddr, connSett.prdvtrPort); break;
 #endif
 
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
 #ifndef DISABLE_M2M_MODULE
-    case IFACECONNTYPE_M2MCLNT : r = openM2mConnection(connSett.m2mhash); break;
+    case IFACECONNTYPE_M2MCLNT : r = openM2mConnection(connSett.disableAPImode, connSett.m2mhash); break;
 #endif
 
 #ifndef DISABLE_SERIALPORT_MODE
-    case IFACECONNTYPE_UART : r = openSerialPort(connSett.prdvtrAddr, connSett.prdvtrPort, connSett.uarts, connSett.databits, connSett.stopbits, connSett.parity, connSett.flowcontrol); break;
+    case IFACECONNTYPE_UART : r = openSerialPort(connSett.disableAPImode, connSett.prdvtrAddr, connSett.prdvtrPort, connSett.uarts, connSett.databits, connSett.stopbits, connSett.parity, connSett.flowcontrol); break;
 #endif
 
 #endif
@@ -241,7 +241,25 @@ bool Conf2modem::networkReset(QString &errStr)
 {
 //    bool writeSomeCommand(const QStringList &list2write, const bool &enterTheCommandMode, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr);
 
-   return writeSomeCommand(QString("ATNR 5").split("\t"), true, false, false, tr("Network reset"), errStr);
+   const bool r = writeSomeCommand(QString("ATNR 5").split("\t"), true, false, false, tr("Network reset"), errStr);
+ #ifndef HASGUI4USR
+   if(r){
+       QTime time;
+       time.start();
+       QTime locktime;
+       locktime.start();
+       for(int i = 0; i < 60 && time.elapsed() < 30000; i++){
+           if(lModemState.isMainConnectionUsed && !writePreffix.isEmpty() && locktime.elapsed() > 1000){
+               writeATcommand("ATCN");
+               locktime.restart();
+           }
+           readDevice("\r\n", false);//wait for the second OK\r\n
+       }
+   }
+#endif
+
+
+   return r;
 
 }
 

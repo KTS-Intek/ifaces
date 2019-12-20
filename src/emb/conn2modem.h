@@ -85,10 +85,15 @@ public:
 
         qint64 lastWriteLen;
 
+
         bool isMainConnectionUsed; //it indicates that main/additional connection is used
+        bool workWithoutAPI;
+
+        bool lastWasATCNtest;//only if ignore daprrtt
+
         LastModemState() :
             lastAtmdValue(-1), atmd2write(-1), directAccess(false), uartBlockPrtt(false), isCoordinatorConfigReady(false),
-            apiErrCounter(0), lastCommandWasAtcn(false), modemIsOverRS485(false), lastWriteLen(-1), isMainConnectionUsed(true) {}
+            apiErrCounter(0), lastCommandWasAtcn(false), modemIsOverRS485(false), lastWriteLen(-1), isMainConnectionUsed(true), workWithoutAPI(false), lastWasATCNtest(false) {}
     } lModemState;
 
 #ifndef DISABLE_TCPCLIENT_MODE
@@ -143,6 +148,8 @@ public:
 
     qint64 bytesAvailable();
 
+    QByteArray clearBufferRead();
+
     QByteArray readAll();
 
     qint64 writeATcommand(const QString &atcommand);
@@ -156,9 +163,9 @@ public:
 
 #ifndef DISABLE_TCPCLIENT_MODE
 
-    bool openTcpConnection(const QStringList &hosts, const QList<quint16> &ports);
+    bool openTcpConnection(const bool &workWithoutAPI, const QStringList &hosts, const QList<quint16> &ports);
 
-    bool openTcpConnection(const QString &host, const quint16 &port);
+    bool openTcpConnection(const bool &workWithoutAPI, const QString &host, const quint16 &port);
 #endif
 
 
@@ -166,15 +173,16 @@ public:
 
 
 #ifndef DISABLE_M2M_MODULE
-    bool openM2mConnection(const QVariantHash &oneProfile);
+    bool openM2mConnection(const bool &workWithoutAPI, const QVariantHash &oneProfile);
 #endif
 
 #ifndef DISABLE_SERIALPORT_MODE
-    bool openSerialPort(const QString &portName, const qint32 &baudRate, const QStringList &uarts, const qint8 &databits, const qint8 &stopbits, const qint8 &parity, const qint8 &flowcontrol);
+    bool openSerialPort(const bool &workWithoutAPI, const QString &portName, const qint32 &baudRate, const QStringList &uarts,
+                        const qint8 &databits, const qint8 &stopbits, const qint8 &parity, const qint8 &flowcontrol);
 
     bool findModemOnPort(QString defPortName, qint32 baudR, QStringList uarts, QString &lastError, const qint8 &databits, const qint8 &stopbits, const qint8 &parity, const qint8 &flowcontrol);
 
-    bool openSerialPortExt(const QString &portName, const qint32 &baudRate, const QSerialPort::DataBits &data, const QSerialPort::StopBits &stopbits, const QSerialPort::Parity &parity,
+    bool openSerialPortExt(const bool &workWithoutAPI, const QString &portName, const qint32 &baudRate, const QSerialPort::DataBits &data, const QSerialPort::StopBits &stopbits, const QSerialPort::Parity &parity,
                            const QSerialPort::FlowControl &flow, const bool &ignoreUartsChecks, QString &lastuarterr);
     bool request2modemOn();
 #endif
@@ -276,6 +284,7 @@ public slots:
     void closeSerialPortDirect();
 #endif
 #endif
+    void activateAsyncModeExt(const quint8 &conntype);
 
     void activateAsyncMode();
 
