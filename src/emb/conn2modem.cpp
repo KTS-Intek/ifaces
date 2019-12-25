@@ -483,6 +483,9 @@ qint64 Conn2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAnd
     const qint64 len = write( (lModemState.isMainConnectionUsed ? writePreffix : QByteArray()) + writeArr);// QByteArray::number(lastPeredavatorPrtt) + "; ;"
 #endif
     const bool wasatcncommand = (len > 0 && writeArr == "ATCN\r\n");
+    if(wasatcncommand)
+        lModemState.isModemInCommandMode = false;
+
     if(lModemState.uartBlockPrtt)
         lModemState.lastCommandWasAtcn = wasatcncommand;
 
@@ -718,8 +721,10 @@ bool Conn2modem::request2modemOn()
         writeATcommand("+++");
         const QByteArray readArr = readDeviceQuick("\r\n", false);
 
-        if(readArr.startsWith("OKERROR") || readArr.startsWith("ERROR"))
+        if(readArr.startsWith("OKERROR") || readArr.startsWith("ERROR")){
+            lModemState.isModemInCommandMode = true;
             return true;
+        }
 
         if(!readArr.isEmpty() && (readArr.contains("OK") || readArr.contains("O\r\n") || readArr.contains("K\r\n")))
             i--;

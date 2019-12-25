@@ -91,9 +91,12 @@ public:
 
         bool lastWasATCNtest;//only if ignore daprrtt
 
+        bool isModemInCommandMode;//true in request2modemOn() , it resets in the write2dev();
+
         LastModemState() :
             lastAtmdValue(-1), atmd2write(-1), directAccess(false), uartBlockPrtt(false), isCoordinatorConfigReady(false),
-            apiErrCounter(0), lastCommandWasAtcn(false), modemIsOverRS485(false), lastWriteLen(-1), isMainConnectionUsed(true), workWithoutAPI(false), lastWasATCNtest(false) {}
+            apiErrCounter(0), lastCommandWasAtcn(false), modemIsOverRS485(false), lastWriteLen(-1), isMainConnectionUsed(true),
+            workWithoutAPI(false), lastWasATCNtest(false), isModemInCommandMode(false) {}
     } lModemState;
 
 #ifndef DISABLE_TCPCLIENT_MODE

@@ -175,9 +175,9 @@ bool Conf2modem::enterCommandMode()
 
     }
 
-#ifdef HASGUI4USR
+//#ifdef HASGUI4USR
     lModemState.modemIsOverRS485 = (readArr == "O\r\n");
-#endif
+//#endif
     for( int retry = 0, odyRaz = 0; retry < 7 && !isCommandModeAnswer(readArr) ; retry++) {//zminyty symvoly vhody v comandnyj rejym
 
         if(sayGoodByeIfUartIsNFree("enterCommandMode 3645 ", 555))
@@ -214,10 +214,10 @@ bool Conf2modem::enterCommandMode()
             retry--;
         }
 
-#ifdef HASGUI4USR
+//#ifdef HASGUI4USR
         if(readArr == "O\r\n")
             lModemState.modemIsOverRS485 = true;
-#endif
+//#endif
 
     }
 
@@ -595,6 +595,9 @@ bool Conf2modem::wait4doubleOk(const bool &isAtlbCommand, const bool &ignoreSeco
         if(ignoreSecondErr && readArr == answr2)
             return true;
         QThread::msleep(50);
+        if(lModemState.modemIsOverRS485 && readArr == "OK\r\n" && time.elapsed() > 3000)
+            return true;//only for RS485
+
     }
     //for ATFR I need only OK
     const bool r = (isAtlbCommand ? (readArr == answr) : (readArr.contains("OK")));
@@ -880,11 +883,24 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
         for(int i = 0, iMax = listArr.size(); i < iMax; i++){
             if(stopAll)
                 return false;
-            writeATcommand(listArr.at(i));
-            QByteArray readArr = readDevice();
+
+
+             if(listArr.at(i) == "ATDB" && lModemState.modemIsOverRS485){
+
+                 aboutModem.insert(listArr.at(i), "ATDB is not supported over RS485");
+                 retryList = 0;
+                 continue;
+
+             }
+                 writeATcommand(listArr.at(i));
+                  QByteArray readArr = readDevice();
+
+
 
             if(!readArr.isEmpty() && listAboutModem.contains(QString(listArr.at(i).left(4)) )){
-                if(listArr.at(i) == "ATDB"){
+                if(listArr.at(i) == "ATDB" ){
+
+
                     QTime time;
                     time.start();
                     for(int v = 0; v < 1000 && time.elapsed() < 30000 && !(readArr.contains("LQI:") && readArr.lastIndexOf("\r\n") > readArr.indexOf("LQI:") ); v++){
@@ -926,8 +942,17 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                 QTime time;
                 time.start();
                 QByteArray readArr = readDevice().toUpper();
-                while(time.elapsed() < 11000 && readArr != "OK\r\n" && !stopAll)
-                    readArr.append(readDevice().toUpper());
+
+
+                for(int i = 0; i < 1000000 && time.elapsed() < 11000 && readArr != "OK\r\n" && !stopAll; i++){
+                    readArr.append(readDevice().toUpper());                    
+
+                }
+                 if(!readArr.contains("OK\r\n") && lModemState.modemIsOverRS485 ){
+
+                     readArr.append("OK\r\n");//only for RS485
+
+                 }
 
 
                 if(!readArr.contains("OK\r\n")){
@@ -972,8 +997,13 @@ bool Conf2modem::isCoordinatorGood(const bool &forced, const bool &readAboutZigB
 #endif
 
 
-    if(!forced && lModemState.isCoordinatorConfigReady && qAbs(lModemState.hashMsecWhenCoordinatorWasGood.value(ifaceName) - QDateTime::currentMSecsSinceEpoch()) < MAX_MSEC_FOR_COORDINATOR_READY )
+    if(!forced && lModemState.isCoordinatorConfigReady && qAbs(lModemState.hashMsecWhenCoordinatorWasGood.value(ifaceName) - QDateTime::currentMSecsSinceEpoch()) < MAX_MSEC_FOR_COORDINATOR_READY ){
+        if(lModemState.isModemInCommandMode){
+            writeATcommand("ATCN");
+            readDeviceQuick("\r\n", true);
+        }
         return lModemState.isCoordinatorConfigReady;
+    }
 
     qDebug() << "isCoordinatorGood " << qAbs(lModemState.hashMsecWhenCoordinatorWasGood.value(ifaceName) - QDateTime::currentMSecsSinceEpoch()) << MAX_MSEC_FOR_COORDINATOR_READY ;
 
