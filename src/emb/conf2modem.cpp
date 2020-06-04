@@ -221,10 +221,10 @@ bool Conf2modem::enterCommandMode()
 
     }
 
-
+#ifdef ENABLE_VERBOSE_SERVER
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem enterCommandMode 3643 directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, readArr=%4, isEntered=%5")
                           .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(QString(readArr.toHex())).arg((bool)(readArr.left(7).toUpper() == "OKERROR" || readArr.left(5).toUpper() == "ERROR")));
-
+#endif
     return isCommandModeAnswer(readArr);
 }
 
@@ -654,10 +654,10 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
     bool ifTrueATCN = true;
 
     bool breakNow = false;
-
+#ifdef ENABLE_VERBOSE_SERVER
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem enableDisableApi a directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, lModemState.apiErrCounter=%4, readAboutZigBee=%5")
                           .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(lModemState.apiErrCounter).arg(int(readAboutZigBee)));
-
+#endif
     bool wasOk4atfr = false, wasOk4atfrFunction = false;
     for(int i = 0; i < 3 && !breakNow; i++){
         emit currentOperation(tr("API enbl=%1, prtt=%2, rtr=%3").arg(enable).arg(QString(writePreffix)).arg(i));
@@ -1005,7 +1005,8 @@ bool Conf2modem::isCoordinatorGood(const bool &forced, const bool &readAboutZigB
         return lModemState.isCoordinatorConfigReady;
     }
 
-    qDebug() << "isCoordinatorGood " << qAbs(lModemState.hashMsecWhenCoordinatorWasGood.value(ifaceName) - QDateTime::currentMSecsSinceEpoch()) << MAX_MSEC_FOR_COORDINATOR_READY ;
+    if(verboseMode)
+        qDebug() << "isCoordinatorGood " << qAbs(lModemState.hashMsecWhenCoordinatorWasGood.value(ifaceName) - QDateTime::currentMSecsSinceEpoch()) << MAX_MSEC_FOR_COORDINATOR_READY ;
 
 
     lModemState.isCoordinatorConfigReady = false;

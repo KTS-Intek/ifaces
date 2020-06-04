@@ -60,7 +60,7 @@ bool Conn2modem::isBlockByPrtt() const
         #ifdef HASGUI4USR
             false
         #else
-             (lModemState.isMainConnectionUsed ? lModemState.uartBlockPrtt : false)
+            (lModemState.isMainConnectionUsed ? lModemState.uartBlockPrtt : false)
         #endif
 
             ;
@@ -72,9 +72,9 @@ bool Conn2modem::isUartBusy() const
 {
     return (lModemState.directAccess
 
-#ifndef HASGUI4USR
+        #ifndef HASGUI4USR
             || (lModemState.isMainConnectionUsed ? lModemState.uartBlockPrtt : false)
-#endif
+        #endif
             );
 }
 //-------------------------------------------------------------------------------------
@@ -202,11 +202,11 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
             hasDataCounter++;
 
 #ifdef Q_OS_LINUX
-//            if(verboseMode)
-//        qDebug() << "readDevice wait4readyread " << time.elapsed() << timeouts.block << globalTime.elapsed() << timeouts.global << (readArr.isEmpty() || time.elapsed() < timeoutblock)
-//                 << (globalTime.elapsed() < timeoutgeneral) ;
+            //            if(verboseMode)
+            //        qDebug() << "readDevice wait4readyread " << time.elapsed() << timeouts.block << globalTime.elapsed() << timeouts.global << (readArr.isEmpty() || time.elapsed() < timeoutblock)
+            //                 << (globalTime.elapsed() < timeoutgeneral) ;
 #endif
-        time.restart();
+            time.restart();
 
         }
         if(!readArrHasData && hasDataCounter != 0)
@@ -219,28 +219,30 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
     }
 
 #ifdef Q_OS_LINUX
-     if(verboseMode)
+    if(verboseMode)
         qDebug() << "readDevice " << time.elapsed() << timeouts.block << globalTime.elapsed() << timeouts.global << (readArr.isEmpty() || time.elapsed() < timeoutblock)
                  << (globalTime.elapsed() < timeoutgeneral) ;
 #endif
     emit dataReadWriteReal(readArr, ifaceName, true);
     if(!uartAccessChecked && (lModemState.directAccess || lModemState.uartBlockPrtt || checkUartAccess(readArr, globalTime.elapsed()))){
         if(sayGoodByeIfUartIsNFree("readDevice ", 555, readArr.isEmpty())){
+#ifdef ENABLE_VERBOSE_SERVER
             if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem readDevice endSymb=%1 exit, busy, timeg=%2, timeb=%3").arg(QString(endSymb))
                                                          .arg(globalTime.elapsed()).arg(time.elapsed()));
+#endif
             return QByteArray();
         }
     }
 
-    emit dataRead(readArr);
+    emit dataRead(readArr);//do not move it, it must be here, even if readArr is empty
 
     if(!readArr.isEmpty())
         emit dataFromDevice();
-
+#ifdef ENABLE_VERBOSE_SERVER
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem readDevice endSymb=%1 exit, readArrIsEmpty=%2, readArr=%3, timeg=%4, timeb=%5")
                                                  .arg(QString(endSymb)).arg(readArr.isEmpty()).arg(QString(readArr.toHex()) + " " + QString(readArr).simplified().trimmed())
                                                  .arg(globalTime.elapsed()).arg(time.elapsed()));
-
+#endif
 
 
 
@@ -455,7 +457,7 @@ qint64 Conn2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAnd
         qDebug() << "ZbyratorObject::write2dev " << lModemState.directAccess << writeArr.simplified() << writeArr.isEmpty() << writePreffix << lModemState.uartBlockPrtt;
 
     const bool isConnOk = isConnectionWorking();
-
+#ifdef ENABLE_VERBOSE_SERVER
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem write2dev directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, writeArr=%4, lastConnectionType=%5, isConnOk=%6")
                                                  .arg(lModemState.directAccess)
                                                  .arg(lModemState.uartBlockPrtt)
@@ -463,7 +465,7 @@ qint64 Conn2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAnd
                                                  .arg(QString(writeArr.toHex()) + " " + QString(writeArr).simplified().trimmed())
                                                  .arg((int)lastConnectionType)
                                                  .arg(int(isConnOk)));
-
+#endif
     if(!isConnOk)
         return 0;
 
@@ -482,7 +484,7 @@ qint64 Conn2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAnd
 #else
     const qint64 len = write( (lModemState.isMainConnectionUsed ? writePreffix : QByteArray()) + writeArr);// QByteArray::number(lastPeredavatorPrtt) + "; ;"
 #endif
-    const bool wasatcncommand = (len > 0 && writeArr == "ATCN\r\n");
+    const bool wasatcncommand = (len == 6 && writeArr == "ATCN\r\n");
     if(wasatcncommand)
         lModemState.isModemInCommandMode = false;
 
@@ -494,12 +496,12 @@ qint64 Conn2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAnd
 
     if(verboseMode)
         qDebug() << "ZbyratorObject::write2dev len=" << len << writePreffix << lModemState.lastCommandWasAtcn << lModemState.lastWasATCNtest;
-
+#ifdef ENABLE_VERBOSE_SERVER
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem write2dev directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, len=%4")
                                                  .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(len));
-
+#endif
     lModemState.lastWriteLen = len;
-    waitForBytesWritten(300);
+    waitForBytesWritten(50);
     emit dataWrite(writeArr);
 
     return len;
@@ -526,8 +528,10 @@ bool Conn2modem::openTcpConnection(const bool &workWithoutAPI, const QString &ho
     const int wait4conn = qMax(timeouts.global, 5000);
     if(verboseMode)
         qDebug() << "Conf2modem::openTcpConnection() " << host << port << timeouts.global << wait4conn ;
-    if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection host=%1, port=%2, myPrtt=%3").arg(host).arg(port).arg(QString(writePreffix)));
 
+#ifdef ENABLE_VERBOSE_SERVER
+    if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection host=%1, port=%2, myPrtt=%3").arg(host).arg(port).arg(QString(writePreffix)));
+#endif
 
     emit openingTcpConnection();
     emit openingAconnection();
@@ -539,12 +543,14 @@ bool Conn2modem::openTcpConnection(const bool &workWithoutAPI, const QString &ho
     const bool r = socket->waitForConnected(wait4conn);
 
     if(!r){
+#ifdef ENABLE_VERBOSE_SERVER
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection err=%1").arg(socket->errorString()));
+#endif
         emit currentOperation(tr("Couldn't connect to the remote device. %1").arg(socket->errorString()));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
         closeDevice();
     }else{
         connectionDownCounter = 0;
-        ifaceName = host.contains(":") ? QString("[%1]:%2").arg(host).arg(port) : QString("%1:%2").arg(host).arg(port);
+        ifaceName = host.contains(":") ? QString("[%1]:%2").arg(host).arg(port) : QString("%1:%2").arg(host).arg(port) + ifacesuffix;
         emit currentOperation(tr("Connection to the remote device was established)"));
     }
     if(verboseMode)
@@ -580,11 +586,13 @@ bool Conn2modem::openM2mConnection(const bool &workWithoutAPI, const QVariantHas
 
     const bool r = svahaConnector->waitForConnected(timeout);
     if(!r){
+#ifdef ENABLE_VERBOSE_SERVER
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openTcpConnection err=%1").arg(svahaConnector->errorString()));
+#endif
         emit currentOperation(tr("Couldn't connect to the remote device. %1").arg(svahaConnector->errorString()));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
         closeDevice();
     }else{
-        ifaceName = svahaConnector->getLastConnDev();
+        ifaceName = svahaConnector->getLastConnDev() + ifacesuffix;
         connectionDownCounter = 0;
         emit currentOperation(tr("Connection to the remote device was established)"));
     }
@@ -611,18 +619,27 @@ bool Conn2modem::openSerialPort(const bool &workWithoutAPI, const QString &portN
     QString mess;
     lModemState.workWithoutAPI = workWithoutAPI;
 
-    const bool r = (uarts.isEmpty() && !portName.isEmpty()) ?
-                findModemOnPort("", baudRate, portName.split("\n"), mess, databits, stopbits, parity, flowcontrol) : //manual mode
+
+    const bool nhasUarts = (uarts.isEmpty() || uarts.join("").isEmpty());//there was an error here, but now everything is fine
+    const bool pnameisembpty = portName.isEmpty();
+
+
+    const bool r = (nhasUarts && !pnameisembpty) ? // (uarts.isEmpty() && !portName.isEmpty()) ?
+                testModemOnPort(portName, baudRate, mess, databits, stopbits, parity, flowcontrol) : //manual mode
                 findModemOnPort(portName, baudRate, uarts, mess, databits, stopbits, parity, flowcontrol); //detection mode
 
 
     if(!r){
+#ifdef ENABLE_VERBOSE_SERVER
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openSerialPort err=%1").arg(mess));
+#endif
+        if(verboseMode)
+            qDebug() << " Conn2modem::openSerialPort " << nhasUarts << pnameisembpty << uarts.size() << uarts;
         emit currentOperation(tr("Couldn't connect to the serial port. %1").arg(mess));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
         closeDevice();
     }else{
         connectionDownCounter = 0;
-        ifaceName = serialPort->portName();
+        ifaceName = serialPort->portName() + ifacesuffix;
         emit currentOperation(tr("Connection to the serial port was established)"));
 
 
@@ -636,6 +653,14 @@ bool Conn2modem::openSerialPort(const bool &workWithoutAPI, const QString &portN
     }
 
     return r;
+}
+
+bool Conn2modem::testModemOnPort(QString defPortName, qint32 baudR, QString &lastError, const qint8 &databits, const qint8 &stopbits, const qint8 &parity, const qint8 &flowcontrol)
+{
+    const QStringList uarts = defPortName.split("\n");
+    const bool r = findModemOnPort("", baudR, uarts, lastError, databits, stopbits, parity, flowcontrol); //manual mode
+    return r;
+
 }
 
 //-------------------------------------------------------------------------------------
@@ -678,7 +703,7 @@ bool Conn2modem::openSerialPortExt(const bool &workWithoutAPI, const QString &po
 
 
     emit currentOperation(tr("Trying to open %1").arg(portName));
-    ifaceName = portName;
+    ifaceName = portName + ifacesuffix;
     serialPort->setPortName(portName);
     lModemState.workWithoutAPI = workWithoutAPI;
 
@@ -691,7 +716,7 @@ bool Conn2modem::openSerialPortExt(const bool &workWithoutAPI, const QString &po
             emit onSerialPortOpened(portName);
 
 
-            if(ignoreUartsChecks){                
+            if(ignoreUartsChecks){
                 emit currentOperation(tr("UART checks are disabled"));
                 return true;
             }
@@ -826,18 +851,22 @@ bool Conn2modem::isCoordinatorFree()
         return true;
 #endif
 
-    const bool da = lModemState.directAccess;
     const bool busy = lModemState.uartBlockPrtt;
 
     QTime time; time.start();
-
+#ifdef ENABLE_VERBOSE_SERVER
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem isCoordinatorFree da directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, time=%4")
                                                  .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(time.elapsed()));
+    const bool da = lModemState.directAccess;
+
+#endif
 
     const bool nfree = lModemState.directAccess || lModemState.uartBlockPrtt;
     if(lModemState.directAccess){
+#ifdef ENABLE_VERBOSE_SERVER
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem ondirectaccess directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, da=%4")
                                                      .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(da));
+#endif
         for(int i = 0; i < 3; i++){
             readDevice();
             if(!lModemState.directAccess && !lModemState.uartBlockPrtt)
@@ -857,11 +886,13 @@ bool Conn2modem::isCoordinatorFree()
         readDeviceQuick("\r\n", false);//в цій функції уже є перевірка прямого доступу
 
     }
+#ifdef ENABLE_VERBOSE_SERVER
     if(da != lModemState.directAccess){
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem isCoordinatorFree da directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, da=%4")
                                                      .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(da));
         //        emit onDaStateChanged(directAccess);
     }
+#endif
 
     if(busy != lModemState.uartBlockPrtt){
 
@@ -923,10 +954,11 @@ bool Conn2modem::sayGoodByeIfUartIsNFree(const QString &mess, const int &msec4bl
 
         if(!lModemState.directAccess && lModemState.uartBlockPrtt && arrIsEmpty && lModemState.lastCommandWasAtcn)
             lModemState.uartBlockPrtt = false;
-        return false;
-
+        return false; //when I did that????
+#ifdef ENABLE_VERBOSE_SERVER
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, mess +  QString("directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, sayGoodByeIfUartIsNFree, msec4blockUart=%4")
                                                      .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(msec4blockUart));
+#endif
         if(msec4blockUart > 0)
             QThread::msleep(msec4blockUart);
         return true;
@@ -934,14 +966,20 @@ bool Conn2modem::sayGoodByeIfUartIsNFree(const QString &mess, const int &msec4bl
     return false;
 }
 
+void Conn2modem::setIfaceNameSuffix(QString suffix)
+{
+    ifacesuffix = suffix;
+}
+
 //-------------------------------------------------------------------------------------
 
 void Conn2modem::setWritePreffix(QByteArray preffix)
 {
+#ifdef ENABLE_VERBOSE_SERVER
     if(writePreffix != preffix)
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem setWritePreffix directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, preffix=%4")
                                                      .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(QString(preffix)));
-
+#endif
 #ifdef DISABLE_UART_PRIORITY
     writePreffix.clear();
 #else
@@ -1000,17 +1038,19 @@ void Conn2modem::incrementApiErrCounter()
     }
 
     if(lModemState.apiErrCounter > MAX_TRIES_FOR_HARD_RESET){
+#ifdef ENABLE_VERBOSE_SERVER
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem incrementApiErrCounter directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, apiErrCounter=%4")
                                                      .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(lModemState.apiErrCounter));
-
+#endif
         emit currentOperation(tr("Exchange error, resetting the coordinator"));
 
         lModemState.apiErrCounter = 0;//обнуляю щоб не дуже часто скидало координатора
         emit resetCoordinatorRequest();
     }else if(lModemState.apiErrCounter > MAX_TRIES_FOR_CONFIG){
+#ifdef ENABLE_VERBOSE_SERVER
         if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem incrementApiErrCounter directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, apiErrCounter=%4")
                                                      .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(lModemState.apiErrCounter));
-
+#endif
         emit currentOperation(tr("Exchange error, killing the TcpToEmbee service"));
         emit killPeredavatorRequest();
     }
@@ -1027,7 +1067,7 @@ void Conn2modem::closeDevice()
     }
     if(lastConnState){
         lastConnState = false;
-        emit onConnectionDown();
+        emit onConnectionDown();//why does it tell to kill UCon tasks?
 
     }
 }
@@ -1142,8 +1182,8 @@ void Conn2modem::deactivateAsyncMode()
 void Conn2modem::exitCommandModeSimple()
 {
 
-        writeATcommand("ATCN");
-        readDeviceQuick("\r\n", true);
+    writeATcommand("ATCN");
+    readDeviceQuick("\r\n", true);
 
 
 }
@@ -1173,6 +1213,7 @@ void Conn2modem::createDevices()
 
     need2closeSerial = false;
     CheckCurrPort *checkPort = new CheckCurrPort(this);
+    checkPort->setObjectName("CheckCurrPort");
 
     connect(checkPort, SIGNAL(portDisconnected(bool)), this, SLOT(closeSerialPortDirect()), Qt::DirectConnection);
     connect(checkPort,SIGNAL(terminateNow()), this, SLOT(closeSerialPortDirect()), Qt::DirectConnection);
@@ -1182,7 +1223,7 @@ void Conn2modem::createDevices()
     connect(this, SIGNAL(stopCheckCurrPort()), checkPort, SLOT(terminate()) );
     connect(this, SIGNAL(onConnectionDown()), checkPort, SLOT(terminate()) );
     connect(this, SIGNAL(onSerialPortOpened(QString)), checkPort, SLOT(zapuskalka(QString)) );
-//    connect(checkPort, &CheckCurrPort::appendMessage, this, &Conn2modem::currentOperation); //it is only for bugs
+    //    connect(checkPort, &CheckCurrPort::appendMessage, this, &Conn2modem::currentOperation); //it is only for bugs
 
 #endif
 }
@@ -1192,8 +1233,10 @@ void Conn2modem::createDevices()
 void Conn2modem::onDeviceDestr()
 {
     close();
+#ifdef ENABLE_VERBOSE_SERVER
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem onDeviceDestr directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, apiErrCounter=%4")
                                                  .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(lModemState.apiErrCounter));
+#endif
     lModemState.modemIsOverRS485 = false;
 
     lModemState.directAccess = lModemState.uartBlockPrtt = false;

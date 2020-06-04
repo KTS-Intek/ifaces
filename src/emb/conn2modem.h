@@ -183,6 +183,8 @@ public:
     bool openSerialPort(const bool &workWithoutAPI, const QString &portName, const qint32 &baudRate, const QStringList &uarts,
                         const qint8 &databits, const qint8 &stopbits, const qint8 &parity, const qint8 &flowcontrol);
 
+    bool testModemOnPort(QString defPortName, qint32 baudR, QString &lastError, const qint8 &databits, const qint8 &stopbits, const qint8 &parity, const qint8 &flowcontrol);
+
     bool findModemOnPort(QString defPortName, qint32 baudR, QStringList uarts, QString &lastError, const qint8 &databits, const qint8 &stopbits, const qint8 &parity, const qint8 &flowcontrol);
 
     bool openSerialPortExt(const bool &workWithoutAPI, const QString &portName, const qint32 &baudRate, const QSerialPort::DataBits &data, const QSerialPort::StopBits &stopbits, const QSerialPort::Parity &parity,
@@ -217,9 +219,9 @@ signals:
     void dataRead(QByteArray readArr);
 
     void dataWrite(QByteArray writeArr);
-
+#ifdef ENABLE_VERBOSE_SERVER
     void appendDbgExtData(quint32 sourceType, QString data);
-
+#endif
     void dataFromDevice();
 
     void onReadWriteOperation(bool isRead);
@@ -259,6 +261,8 @@ signals:
 
 
 public slots:
+    void setIfaceNameSuffix(QString suffix);
+
     void setWritePreffix(QByteArray preffix);
 
     void setWritePriority(const quint8 &prtt);
@@ -308,6 +312,8 @@ private:
     void close();
 
     int maxDataFromModem;
+
+    QString ifacesuffix;
 
 };
 

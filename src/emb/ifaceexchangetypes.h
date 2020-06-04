@@ -40,6 +40,7 @@ struct TaskState
     quint32 taskId;
     bool noTasks;//завершено обробку завдання, будь яка причина
     bool tasksProcessingEnded;//true - інтерфейс закрито бо обмін з лічильником завершено, а нові завдання відсутні. false - є завдання і була спроба відкриття з'єднання
+    QString lastDevNI;
     TaskState() : taskId(0), noTasks(true), tasksProcessingEnded(true) {}
 } ;
 
@@ -119,6 +120,8 @@ struct ExchangeWithOneModemStat
 
     ExchangeWithOneModemStat() : byte2meter(0), bytesFromMeter(0), totalMessCounter(0), usflDataLen(0), badAnswerCounter(0), emptySequenceAnswerCounter(0)  {}
 };
+
+
 
 
 #endif // IFACEEXCHANGETYPES_H
