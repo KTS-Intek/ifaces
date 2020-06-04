@@ -96,6 +96,7 @@ void SvahaServiceConnector::connect2hostViaSvaha(QVariantHash oneProfile, const 
         socket->key2header = this->key2header;
 
         QThread *t = new QThread;
+        t->setObjectName("SvahaSocket");
         socket->moveToThread(t);
 
         connect(t, SIGNAL(started()), socket, SLOT(startConnection()) );
