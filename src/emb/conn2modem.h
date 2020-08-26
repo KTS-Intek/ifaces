@@ -25,16 +25,13 @@
 #endif
 
 
+///[!] ifaces
+#include "src/emb/ifaceexchangeserializedtypes.h"
+
+
 #include "ifaceconnectiondefs.h"
 
 
-
-struct DeviceTimeouts
-{
-    int block;
-    int global;
-    DeviceTimeouts() : block(77), global(7777) {}
-};
 
 
 

@@ -4,7 +4,6 @@
 #include "conn2modem.h"
 
 ///[!] ifaces
-#include "src/emb/ifaceexchangeserializedtypes.h"
 #include "src/emb/embnodediscoveryconverter.h"
 
 
@@ -30,6 +29,8 @@ public:
         RezUpdateConnSettings() {}
         RezUpdateConnSettings(const ZbyrConnSett &connSett, const QString &ifaceParams) : connSett(connSett), ifaceParams(ifaceParams) {}
     };
+
+
 
     static RezUpdateConnSettings convertFromVarMap(const QVariantMap &interfaceSettings);
 
@@ -88,6 +89,19 @@ public:
 
     bool decodeNtdOneLine(const QString &line, const qint64 &msec, const bool &wasRestored, QStringList &listreadynis);
 
+    bool writeZombieCommands(const QStringList &lcommands, QString &errStr);
+
+    void processOneZombieCommand(const QString &command, EMBZombieExchangeTypes &zombiereadparams);
+
+    void checkReadZombieCommand(const QString &command, EMBZombieExchangeTypes &zombiereadparams);
+
+
+    QByteArray replace0D0A(QString line);
+
+    int getTag4command(const QString &line, int lasttag);
+
+    int getTimeFromLine(const QString &command, bool &ok);
+    void checkMakeZombiePause(const QString &command);
 
 #ifdef ENABLE_EMBEEMODEM_EXTENDED_OPERATIONS
 

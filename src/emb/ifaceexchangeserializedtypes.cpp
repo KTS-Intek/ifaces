@@ -86,6 +86,13 @@ ZbyrConnSett IfaceExchangeSerializedTypes::getZbyrConnSettFromArgs(const QString
     return connSett;
 }
 
+EMBZombieExchangeTypes IfaceExchangeSerializedTypes::getDefaultValues4zombie(const DeviceTimeouts &timeouts)
+{
+    EMBZombieExchangeTypes t;
+    t.timeouts = timeouts;
+    return t;
+}
+
 //must be in a cpp file!!!
 QDataStream &operator <<(QDataStream &out, const ZbyrConnSett &m)
 {

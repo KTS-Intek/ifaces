@@ -1209,6 +1209,264 @@ bool Conf2modem::decodeNtdOneLine(const QString &line, const qint64 &msec, const
     return true;
 }
 
+//-------------------------------------------------------------------------------------
+
+bool Conf2modem::writeZombieCommands(const QStringList &lcommands, QString &errStr)
+{
+
+    Q_UNUSED(errStr);
+
+//    emit currentOperation(tr("Reading '%1'").arg(operationName));
+
+//    for(int i = 0, imax = list2read.size(); i < imax; i++){
+//        writeATcommand(list2read.at(i));
+//        const QByteArray readarr = readDevice();
+//        if(!readarr.isEmpty() && readarr != "ERROR\r\n"){
+//            const QString rez = QString(readarr).left(readarr.length() - 2);
+
+//            bool ok;
+//            const int v = rez.toInt(&ok);
+
+//            map.insert(list2read.at(i), rez);
+//            if(ok)
+//                map.insert("int" + list2read.at(i), QString::number(v));
+//            emit atCommandRez(list2read.at(i), rez);
+//        }else
+//            errStr = tr("Command '%1' failed").arg(list2read.at(i));
+//    }
+
+//    if(exitCommandMode && !writeSomeCommand(QStringList(), false, exitCommandMode, atfrAtTheEnd, tr("%1, exiting the command mode").arg(operationName), errStr))
+//        return map;
+
+
+    EMBZombieExchangeTypes zombiereadparams = IfaceExchangeSerializedTypes::getDefaultValues4zombie(timeouts);
+
+/*
+ *
+*/
+
+    for(int i = 0, imax = lcommands.size(); i < imax && !stopAll; i++){
+        processOneZombieCommand(lcommands.at(i), zombiereadparams);
+    }
+    return true;
+}
+
+//----------------------------------------------------------------------------------
+
+void Conf2modem::processOneZombieCommand(const QString &command, EMBZombieExchangeTypes &zombiereadparams)
+{
+    if(command.isEmpty())
+        return;
+
+    if(command.startsWith("$rp ")){//read
+        checkReadZombieCommand(command, zombiereadparams);
+        return;
+    }
+
+    if(command.startsWith("$t:")){//make a pause
+        checkMakeZombiePause(command);
+        return;
+    }
+
+    QByteArray writearr;
+    if(command.startsWith("$h:")){
+        const QByteArray arr = QByteArray::fromHex(command.mid(3).toUtf8());
+        if(!arr.isEmpty())
+            return;
+        writearr = arr;
+    }else{
+        writearr = replace0D0A(command);
+    }
+
+    write2dev(writearr);
+
+
+}
+
+//----------------------------------------------------------------------------------
+
+void Conf2modem::checkReadZombieCommand(const QString &command, EMBZombieExchangeTypes &zombiereadparams)
+{
+
+    QTime msecwait;
+    msecwait.start();
+
+    QList<QByteArray> listanswers;
+    QList<QByteArray> listends;
+    int minl = 0;
+    int tmsec = zombiereadparams.timeouts.global;
+
+    const QStringList list = command.split(" ", QString::SkipEmptyParts);
+
+
+
+    int lasttag = 0;
+    /*
+     * 0 - rp
+     * 1 - rph
+     * 2 - t
+     * 3 - end
+     * 4 - endh
+     * 5 - minl
+*/
+    for(int i = 0, imax = list.size(); i < imax; i++){
+        const QString line = list.at(i);
+
+
+        const int tag = getTag4command(line, lasttag);
+
+        const bool tagchanged = (tag != lasttag);
+        lasttag = tag;
+        switch(lasttag){
+        case 0:{
+            if(i == 0 || tagchanged)//it is impossible to get tagchanged=true
+                continue;//this line doesn't have data
+            listanswers.append( replace0D0A(line));
+            break;}
+        case 1:{
+            const QByteArray arr = QByteArray::fromHex(line.mid(tagchanged ? 2 : 0).toLocal8Bit());
+            if(!arr.isEmpty())
+                listanswers.append(arr);
+            break;}
+
+        case 2:{
+            bool ok;
+            tmsec = getTimeFromLine(line, ok);
+            break;}
+
+        case 3:{
+            listends.append( replace0D0A(line.mid(tagchanged ? 4 : 0)));
+            break;}
+
+
+        case 4:{
+            const QByteArray arr = QByteArray::fromHex(line.mid(tagchanged ? 5 : 0).toLocal8Bit());
+            if(!arr.isEmpty())
+                listends.append(arr);
+            break;}
+
+        case 5:{
+
+            bool ok;
+            minl = line.mid(5).toInt(&ok);
+            if(!ok || minl < 0)
+                minl = 0;
+            break;}
+        }
+
+    }
+    QByteArray readarr;
+
+
+    for(int i = 0, amax = listends.size(); i < 10000; i++){
+
+        const QByteArray arr = readDeviceQuick(listends.isEmpty() ? "" : listends.first(), false);
+
+
+        if(tmsec > 0 && msecwait.elapsed() > tmsec){
+            return;
+        }
+
+        if(!arr.isEmpty()){
+            readarr.append(arr);
+
+            if(!listanswers.isEmpty() && listanswers.contains(readarr))
+                return;
+
+            const int readarrlen = readarr.length();
+            if(minl > 0 && readarrlen < minl)
+                continue;
+
+            if(!listanswers.isEmpty() && listanswers.contains(readarr))
+                break;
+
+            for(int a = 0; a < amax; a++){
+                if(readarr.endsWith(listends.at(a))){
+                    return;
+                }
+            }
+
+            if(minl > 0 && readarrlen >= minl && listanswers.isEmpty() && listends.isEmpty())
+                return;
+        }
+
+    }
+
+}
+
+//----------------------------------------------------------------------------------
+
+QByteArray Conf2modem::replace0D0A(QString line)
+{
+    if(line.contains("\\r")){
+        line = line.replace("\\r", "\r");
+    }
+    if(line.contains("\\n")){
+        line = line.replace("\\n", "\n");
+    }
+
+    return line.toUtf8();
+}
+
+//----------------------------------------------------------------------------------
+
+int Conf2modem::getTag4command(const QString &line, int lasttag)
+{
+
+    if(line.startsWith("h:"))
+        return 1;
+
+
+    if(line.startsWith("t:"))
+        return 2;
+
+
+    if(line.startsWith("end:"))
+        return 3;
+
+    if(line.startsWith("endh:"))
+        return 4;
+
+    if(line.startsWith("minl:"))
+        return 5;
+
+    return lasttag;
+
+}
+
+//----------------------------------------------------------------------------------
+
+int Conf2modem::getTimeFromLine(const QString &command, bool &ok)
+{
+    const QString s = command.mid(3).simplified().trimmed().split(" ", QString::SkipEmptyParts).first();
+    int msecwait = s.toInt(&ok);
+    if(msecwait < 1 || !ok)
+        return 0;
+
+    if(msecwait > 60000)
+        msecwait = 60000;
+    return msecwait;
+}
+
+//----------------------------------------------------------------------------------
+
+void Conf2modem::checkMakeZombiePause(const QString &command)
+{
+    QTime time;
+    time.start();
+    bool ok;
+
+    const int msecwait = getTimeFromLine(command, ok);
+
+    const int stepmsec = qMax(1, msecwait/20);
+
+    for(int i = 0; i < 600000 && time.elapsed() < msecwait && !stopAll; i++){
+        QThread::msleep(stepmsec);
+    }
+}
+
+//-------------------------------------------------------------------------------------
+
 void Conf2modem::setAtmdValueFromString(const QString &s)
 {
     if(!s.isEmpty()){

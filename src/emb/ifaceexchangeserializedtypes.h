@@ -69,7 +69,27 @@ struct CurrentMeterPoll
     CurrentMeterPoll() : meterRetry(0), wasOk(false), updateMeterSett(false) , timeElapsed4multicast(0), hasSettings(false), taskCounter(-1), taskSrc(-1) {}
 };
 
+struct DeviceTimeouts
+{
+    int block;
+    int global;
+    DeviceTimeouts() : block(77), global(7777) {}
+};
 
+
+
+
+struct EMBZombieExchangeTypes
+{
+    DeviceTimeouts timeouts;
+
+    QString endseq;
+    int readlen ;
+    QString answr ;
+    int convert8to7;
+
+    EMBZombieExchangeTypes() : endseq("\r\n"), readlen(0), convert8to7(0) {}
+};
 
 
 
@@ -87,6 +107,7 @@ public:
 
     static ZbyrConnSett getZbyrConnSettFromArgs(const QStringList &list, bool &ok);
 
+    static EMBZombieExchangeTypes getDefaultValues4zombie(const DeviceTimeouts &timeouts);
 
 };
 //must be in a header file, outside the class!!!
