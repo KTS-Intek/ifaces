@@ -59,6 +59,8 @@ public:
 
     bool writeCommands2aModem(const QStringList &lcommands, QString &errStr);
 
+    bool checkConnectionTool(const QString &ni, QString &errStr);
+
 
     bool writeSomeCommand(const QString &atcommand, const bool &enterTheCommandMode, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr);
 

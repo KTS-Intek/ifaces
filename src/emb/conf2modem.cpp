@@ -496,6 +496,62 @@ bool Conf2modem::writeCommands2aModem(const QStringList &lcommands, QString &err
 
 //-------------------------------------------------------------------------------------
 
+bool Conf2modem::checkConnectionTool(const QString &ni, QString &errStr)
+{
+
+//    15:37:56.470 192.168.88.143 <- 34 35 34 35 20 44 31 0D 0A                      4545 D1
+//    15:38:01.969 192.168.88.143 -> 45 52 52 4F 52 0D 0A                            ERROR
+//    15:38:30.271 192.168.88.143 <- 32 33 33 62 31 30 38 20 44 31 0D 0A             233b108 D1
+//    15:38:37.623 192.168.88.143 -> 45 52 52 4F 52 0D 0A                            ERROR
+//    15:38:42.993 192.168.88.143 <- 32 33 33 62 31 30 38 20 44 31 0D 0A             233b108 D1
+//    15:38:43.493 192.168.88.143 -> 4F 4B 0D 0A                                     OK
+//    15:38:43.752 192.168.88.143 -> 32 33 33 62 31 30 38 20 44 31 0D 0A 45 52 52 4F 233b108 D1 ERRO
+//                 192.168.88.143 -> 52 0D 0A                                        R
+
+
+    if(!lModemState.lastCommandWasAtcn){
+        lModemState.lastCommandWasAtcn = true;
+        writeATcommand("ATCN");
+    }
+    readDeviceQuick("\r\n", true);
+
+
+    const QByteArray writearr = QString("%1 D0\r\n").arg(ni).toUtf8();
+    write2dev(writearr);
+
+    QTime time;
+    time.start();
+    const int msecwait = qMax(timeouts.global, 7777);
+
+    QByteArray readarr;
+    for(int i = 0; i < 10000 && time.elapsed() < msecwait; i++){
+        const QByteArray arr = readDevice();
+        if(!arr.isEmpty()){
+            readarr.append(arr);
+            if((readarr.startsWith("ERROR") || readarr.contains(writearr)) && readarr.endsWith("\r\n")){
+                break;
+            }
+
+        }
+    }
+    const QByteArray perfectprefix = QByteArray("OK\r\n") + writearr;
+    if(readarr.startsWith(perfectprefix)){
+        if(readarr.length() > perfectprefix.length()){//contains more data than perfectprefix
+            errStr = tr("Device %1 was found").arg(ni);
+            return true;
+        }
+        errStr.append(tr("The answer len is not valid"));
+    }else{
+        errStr.append(tr("Bad answer was detected"));
+    }
+
+    return false;
+
+
+}
+
+//-------------------------------------------------------------------------------------
+
 bool Conf2modem::writeSomeCommand(const QString &atcommand, const bool &enterTheCommandMode, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr)
 {
     return writeSomeCommand(atcommand.split("\n", QString::SkipEmptyParts), enterTheCommandMode, exitCommandMode, atfrAtTheEnd, operationName, errStr);

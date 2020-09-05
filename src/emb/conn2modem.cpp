@@ -783,8 +783,8 @@ bool Conn2modem::checkUartAccess(const QByteArray &arr, const int &msecElapsed)
     if(lastConnectionType == IFACECONNTYPE_UART)
         return false;//It is a direct connection
 
-    if(verboseMode)
-        qDebug() << "checkUartAccess " << arr.isEmpty() << msecElapsed << lModemState.uartBlockPrtt << lModemState.lastCommandWasAtcn << lModemState.directAccess << arr.toHex();
+//    if(verboseMode)
+//        qDebug() << "checkUartAccess " << arr.isEmpty() << msecElapsed << lModemState.uartBlockPrtt << lModemState.lastCommandWasAtcn << lModemState.directAccess << arr.toHex();
     if(lModemState.uartBlockPrtt && lModemState.lastCommandWasAtcn && arr.isEmpty() && msecElapsed > 200){
         lModemState.directAccess = lModemState.uartBlockPrtt = false;
         return false;
