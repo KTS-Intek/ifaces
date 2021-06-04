@@ -616,7 +616,7 @@ bool Conn2modem::openSerialPort(const bool &workWithoutAPI, const QString &portN
     emit openingAconnection();
     stopAll = false;
     lastConnectionType = IFACECONNTYPE_UART;
-    QString mess;
+    QString messageStrr;
     lModemState.workWithoutAPI = workWithoutAPI;
 
 
@@ -625,17 +625,17 @@ bool Conn2modem::openSerialPort(const bool &workWithoutAPI, const QString &portN
 
 
     const bool r = (nhasUarts && !pnameisembpty) ? // (uarts.isEmpty() && !portName.isEmpty()) ?
-                testModemOnPort(portName, baudRate, mess, databits, stopbits, parity, flowcontrol) : //manual mode
-                findModemOnPort(portName, baudRate, uarts, mess, databits, stopbits, parity, flowcontrol); //detection mode
+                testModemOnPort(portName, baudRate, messageStrr, databits, stopbits, parity, flowcontrol) : //manual mode
+                findModemOnPort(portName, baudRate, uarts, messageStrr, databits, stopbits, parity, flowcontrol); //detection mode
 
 
     if(!r){
 #ifdef ENABLE_VERBOSE_SERVER
-        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openSerialPort err=%1").arg(mess));
+        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem openSerialPort err=%1").arg(messageStrr));
 #endif
         if(verboseMode)
             qDebug() << " Conn2modem::openSerialPort " << nhasUarts << pnameisembpty << uarts.size() << uarts;
-        emit currentOperation(tr("Couldn't connect to the serial port. %1").arg(mess));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
+        emit currentOperation(tr("Couldn't connect to the serial port. %1").arg(messageStrr));//%1 %2, %3").arg(host).arg(port).arg(socket->errorString()));
         closeDevice();
     }else{
         connectionDownCounter = 0;
@@ -643,11 +643,12 @@ bool Conn2modem::openSerialPort(const bool &workWithoutAPI, const QString &portN
         emit currentOperation(tr("Connection to the serial port was established)"));
 
 
-        emit currentOperation(tr("Serialport settings are %1, %2, %3, %4")
+        emit currentOperation(tr("Serialport settings are %1, %2, %3, %4, %5")
                               .arg(QString::number(databits))
                               .arg(QString("No parity;Even;Odd;Space;Mark").split(";").at(qMin(4, qMax(0, int(parity)))) )
                               .arg(QString::number(stopbits))
                               .arg(QString("No flowcontrol;Hardware RTS/CTS;Software XON/XOFF").split(";").at(qMin(2, qMax(0, int(flowcontrol)))) )
+                              .arg(baudRate)
                               );
 
     }
@@ -938,25 +939,25 @@ bool Conn2modem::isCoordinatorFreeWithRead()
 
 //-------------------------------------------------------------------------------------
 
-bool Conn2modem::sayGoodByeIfUartIsNFree(const QString &mess, const int &msec4blockUart)
+bool Conn2modem::sayGoodByeIfUartIsNFree(const QString &messageStrr, const int &msec4blockUart)
 {
-    return sayGoodByeIfUartIsNFree(mess, msec4blockUart, false);
+    return sayGoodByeIfUartIsNFree(messageStrr, msec4blockUart, false);
 
 }
 
 //-------------------------------------------------------------------------------------
 
-bool Conn2modem::sayGoodByeIfUartIsNFree(const QString &mess, const int &msec4blockUart, const bool &arrIsEmpty)
+bool Conn2modem::sayGoodByeIfUartIsNFree(const QString &messageStrr, const int &msec4blockUart, const bool &arrIsEmpty)
 {
     if(lModemState.directAccess || lModemState.uartBlockPrtt){
         if(verboseMode)
-            qDebug() << mess << lModemState.directAccess << lModemState.uartBlockPrtt;
+            qDebug() << messageStrr << lModemState.directAccess << lModemState.uartBlockPrtt;
 
         if(!lModemState.directAccess && lModemState.uartBlockPrtt && arrIsEmpty && lModemState.lastCommandWasAtcn)
             lModemState.uartBlockPrtt = false;
         return false; //when I did that????
 #ifdef ENABLE_VERBOSE_SERVER
-        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, mess +  QString("directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, sayGoodByeIfUartIsNFree, msec4blockUart=%4")
+        if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, messageStrr +  QString("directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, sayGoodByeIfUartIsNFree, msec4blockUart=%4")
                                                      .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(msec4blockUart));
 #endif
         if(msec4blockUart > 0)
@@ -981,6 +982,7 @@ void Conn2modem::setWritePreffix(QByteArray preffix)
                                                      .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(QString(preffix)));
 #endif
 #ifdef DISABLE_UART_PRIORITY
+    Q_UNUSED(preffix);
     writePreffix.clear();
 #else
 

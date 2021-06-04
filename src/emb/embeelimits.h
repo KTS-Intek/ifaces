@@ -3,6 +3,8 @@
 
 #define MAX_MSEC_4_EMB_READY            180000
 #define MAX_READ_FROM_UART              260
+#define MAX_READ_FROM_UART_HEAVY        260000 //for fucking IEC
+
 #define MAX_READ_TRYES_FROM_UART        20000
 #define MAX_TIME_FROM_EMPTY_MSEC        120000 //3 hvylyn for multicast
 #define MAX_TIME_FOR_MULTICAST_MSEC     300000 //5 hvylyn for multicast

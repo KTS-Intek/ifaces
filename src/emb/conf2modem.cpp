@@ -76,7 +76,7 @@ Conf2modem::RezUpdateConnSettings Conf2modem::convertFromVarMapExt(const QVarian
     connSett.unknownProtocolAsData = interfaceSettings.value("unknownProtocolAsData").toBool();
     connSett.disableAPImode = interfaceSettings.value("disableAPImode").toBool();
     connSett.forceHrdAddrsn = interfaceSettings.value("forceHrdAddrsn").toBool();
-
+    connSett.settext = interfaceSettings.value("settext");//m2mDAchannel 4 m2m connection
     connSett.databits = ValueValidator::validateIntegerRange("databits", interfaceSettings, 8, 5, 8);
     connSett.stopbits = ValueValidator::validateIntegerRange("stopbits", interfaceSettings, 1, 1, 2);
     connSett.parity = ValueValidator::validateIntegerRange("parity", interfaceSettings, 0, 0, 2);

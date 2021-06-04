@@ -201,9 +201,9 @@ public:
 
     bool isCoordinatorFreeWithRead();
 
-    bool sayGoodByeIfUartIsNFree(const QString &mess, const int &msec4blockUart);
+    bool sayGoodByeIfUartIsNFree(const QString &messageStrr, const int &msec4blockUart);
 
-    bool sayGoodByeIfUartIsNFree(const QString &mess, const int &msec4blockUart, const bool &arrIsEmpty);
+    bool sayGoodByeIfUartIsNFree(const QString &messageStrr, const int &msec4blockUart, const bool &arrIsEmpty);
 
 
 
@@ -225,7 +225,7 @@ signals:
 
     void openingTcpConnection();
 
-    void currentOperation(QString mess);
+    void currentOperation(QString messageStrr);
 
     void onCoordinatorIsBusy(bool busy);
 

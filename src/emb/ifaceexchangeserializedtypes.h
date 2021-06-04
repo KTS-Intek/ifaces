@@ -34,6 +34,7 @@ struct ZbyrConnSett
     bool disableAPImode;
     bool forceHrdAddrsn;
 
+    QVariant settext;//some additional settings, it depends on connection type
 
     qint8 databits;
     qint8 stopbits;

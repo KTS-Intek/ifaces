@@ -15,4 +15,15 @@
 #define IFACECONNTYPE_M2MCLNT   2
 #define IFACECONNTYPE_UNKN      0xFF
 
+
+//network speed level kilobyte/msec
+#define NET_SPEED_VERY_LOW      3
+#define NET_SPEED_LOW           11
+#define NET_SPEED_NORMAL        30   //if speed > NET_SPEED_NORMAL : disable compressing
+#define NET_SPEED_HIGH          55//300
+#define NET_SPEED_VERY_HIGH     200//1500
+#define NET_SPEED_UFS_1         800//1500
+
+
+
 #endif // IFACECONNECTIONDEFS_H
