@@ -45,6 +45,13 @@ Conf2modem::RezUpdateConnSettings Conf2modem::convertFromVarMapExt(const QVarian
         break;}
 
     }
+
+    connSett.databits = ValueValidator::validateIntegerRange("databits", interfaceSettings, 8, 5, 8);
+    connSett.stopbits = ValueValidator::validateIntegerRange("stopbits", interfaceSettings, 1, 1, 2);
+    connSett.parity = ValueValidator::validateIntegerRange("parity", interfaceSettings, 0, 0, 2);
+    connSett.flowcontrol = ValueValidator::validateIntegerRange("flow", interfaceSettings, 0, 0, 4);
+
+
     QString ifaceParams;
     switch(connSett.connectionType){
 
@@ -61,7 +68,10 @@ Conf2modem::RezUpdateConnSettings Conf2modem::convertFromVarMapExt(const QVarian
         break;}
 
     default :{
-        ifaceParams = QString("%1\n\n\n%2\n%3").arg(connSett.uarts.join("\r")).arg(connSett.prdvtrAddr).arg(connSett.prdvtrPort);
+        ifaceParams = QString("%1\n\n\n%2\n%3"
+                              "\nD%4-S%5-P%6-F%7")
+                .arg(connSett.uarts.join("\r")).arg(connSett.prdvtrAddr).arg(connSett.prdvtrPort)
+                .arg(int(connSett.databits)).arg(int(connSett.stopbits)).arg(int(connSett.parity)).arg(int(connSett.flowcontrol));
         break;}
 
     }
@@ -77,10 +87,7 @@ Conf2modem::RezUpdateConnSettings Conf2modem::convertFromVarMapExt(const QVarian
     connSett.disableAPImode = interfaceSettings.value("disableAPImode").toBool();
     connSett.forceHrdAddrsn = interfaceSettings.value("forceHrdAddrsn").toBool();
     connSett.settext = interfaceSettings.value("settext");//m2mDAchannel 4 m2m connection
-    connSett.databits = ValueValidator::validateIntegerRange("databits", interfaceSettings, 8, 5, 8);
-    connSett.stopbits = ValueValidator::validateIntegerRange("stopbits", interfaceSettings, 1, 1, 2);
-    connSett.parity = ValueValidator::validateIntegerRange("parity", interfaceSettings, 0, 0, 2);
-    connSett.flowcontrol = ValueValidator::validateIntegerRange("flow", interfaceSettings, 0, 0, 4);
+
 
     return Conf2modem::RezUpdateConnSettings(connSett, ifaceParams);
 }
