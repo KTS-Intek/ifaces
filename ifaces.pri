@@ -47,7 +47,13 @@ contains( QT, network) {
         include(../m2m-connector/m2m-connector.pri)
         message($$TARGET ", ifaces: m2m-connector is enabled")
     }else{
-        message($$TARGET ", ifaces: m2m-connector is disabled")
+
+        contains(DEFINES, ENABLE_EXTSUPPORT_OF_IFACES)
+            message($$TARGET ", ifaces: m2m-connector is disabled, !ENABLE_EXTSUPPORT_OF_IFACES")
+
+        contains(DEFINES, DISABLE_M2M_MODULE)
+            message($$TARGET ", ifaces: m2m-connector is disabled, DISABLE_M2M_MODULE")
+
 
     }
 
