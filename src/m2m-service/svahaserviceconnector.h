@@ -69,7 +69,7 @@ signals:
     void onCOMMAND2GUIS(quint16 command, QVariantHash varHash);
     void appendLedLampListVar(QVariantList listvar);
 
-    void showMess(QString mess);
+    void showMessage(QString messageStrr);
 
     void onConnectionWorks(bool works);
 
@@ -104,7 +104,7 @@ public slots:
 
     void softDelete();
 
-    void showMessS(quint8 sessionId, QString mess);
+    void showMessS(quint8 sessionId, QString messageStrr);
     void setHeader4map(QString key, QStringList header);
 
 

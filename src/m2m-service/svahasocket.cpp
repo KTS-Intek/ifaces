@@ -53,26 +53,26 @@ void SvahaSocket::setDoAfterConn(const int &command, const QVariantHash &s_data)
 
 QString SvahaSocket::getErrMess(const int &code, const QString &commandName)
 {
-    QString mess;
+    QString messageStrr;
     switch(code){
-    case ERR_DATABASE_CLOSED    : mess = tr("Command: %1. Database is not opened.").arg(commandName); break;
-    case ERR_INCORRECT_REQUEST  : mess = tr("Command: %1. Incorrect request.").arg(commandName); break;
-    case ERR_INTERNAL_ERROR     : mess = tr("Command: %1. Internal error.").arg(commandName); break;
-    case ERR_NO_DATA            : mess = tr("Command: %1. Data is not found.").arg(commandName); break;
+    case ERR_DATABASE_CLOSED    : messageStrr = tr("Command: %1. Database is not opened.").arg(commandName); break;
+    case ERR_INCORRECT_REQUEST  : messageStrr = tr("Command: %1. Incorrect request.").arg(commandName); break;
+    case ERR_INTERNAL_ERROR     : messageStrr = tr("Command: %1. Internal error.").arg(commandName); break;
+    case ERR_NO_DATA            : messageStrr = tr("Command: %1. Data is not found.").arg(commandName); break;
 
-    case ERR_MAX_TABLE_COUNT    : mess = tr("Command: %1. The table count limit was reached").arg(commandName); break;
-    case ERR_CORRUPTED_DATA     : mess = tr("Command: %1. Data is corrupted").arg(commandName); break;
-    case ERR_DUPLICATE_NI       : mess = tr("Command: %1. Duplicating NI").arg(commandName); break;
-    case ERR_DUPLICATE_SN       : mess = tr("Command: %1. Duplicating S/N").arg(commandName); break;
-    case ERR_DATE_NOT_VALID     : mess = tr("Command: %1. Date is invalid").arg(commandName); break;
-    case ERR_COMMAND_NOT_ALLOWED: mess = tr("Command: %1. Command is not allowed").arg(commandName); break;
-    case ERR_ACCESS_DENIED      : mess = tr("Command: %1. Access error").arg(commandName); break;
-    case ERR_RESOURCE_BUSY      : mess = tr("Command: %1. Resource is busy").arg(commandName); break;
-    case ERR_DA_CLOSED          : mess = tr("Direct access was close");  break;
-    case ERR_NO_ERROR           : mess = tr("Command: %1. Done)").arg(commandName); break;
-    default: mess = tr("Command: %1. Unknown error. Error code: %2").arg(commandName).arg(code); break;
+    case ERR_MAX_TABLE_COUNT    : messageStrr = tr("Command: %1. The table count limit was reached").arg(commandName); break;
+    case ERR_CORRUPTED_DATA     : messageStrr = tr("Command: %1. Data is corrupted").arg(commandName); break;
+    case ERR_DUPLICATE_NI       : messageStrr = tr("Command: %1. Duplicating NI").arg(commandName); break;
+    case ERR_DUPLICATE_SN       : messageStrr = tr("Command: %1. Duplicating S/N").arg(commandName); break;
+    case ERR_DATE_NOT_VALID     : messageStrr = tr("Command: %1. Date is invalid").arg(commandName); break;
+    case ERR_COMMAND_NOT_ALLOWED: messageStrr = tr("Command: %1. Command is not allowed").arg(commandName); break;
+    case ERR_ACCESS_DENIED      : messageStrr = tr("Command: %1. Access error").arg(commandName); break;
+    case ERR_RESOURCE_BUSY      : messageStrr = tr("Command: %1. Resource is busy").arg(commandName); break;
+    case ERR_DA_CLOSED          : messageStrr = tr("Direct access was close");  break;
+    case ERR_NO_ERROR           : messageStrr = tr("Command: %1. Done)").arg(commandName); break;
+    default: messageStrr = tr("Command: %1. Unknown error. Error code: %2").arg(commandName).arg(code); break;
     }
-    return mess;
+    return messageStrr;
 
 }
 //------------------------------------------------------------------------------------------
@@ -266,7 +266,7 @@ void SvahaSocket::decodeReadData(const QVariant &dataVar, const quint16 &command
     }
 
     bool rezIsGood = true;
-    int messCode = MESS_NO_MESS;
+    int messCode = MESSAGE_NO_MESSAGE;
 
     switch(command){
 
@@ -306,7 +306,7 @@ void SvahaSocket::decodeReadData(const QVariant &dataVar, const quint16 &command
         default: {
             emit onSvahaSocketReady(sessionId, socketStamp);
             emit add2systemLog( sessionId, tr("Access error("));
-            emit showMess(sessionId, tr("Access error("));
+            emit showMessage(sessionId, tr("Access error("));
             onDisconn();
             break;}
         }
@@ -368,13 +368,13 @@ void SvahaSocket::decodeReadData(const QVariant &dataVar, const quint16 &command
     else{
 
         if(!hashMemoWrite.isEmpty()){
-            if(rezIsGood && messCode == MESS_OPERATION_IN_PROGRESS){
+            if(rezIsGood && messCode == MESSAGE_OPERATION_IN_PROGRESS){
                 return;
             }
 
             if(!(rezIsGood && (command == COMMAND_ERROR_CODE || command == COMMAND_ERROR_CODE_EXT))){
 
-                if(messCode != MESS_NO_MESS && messCode != MESS_OPERATION_IN_PROGRESS)
+                if(messCode != MESSAGE_NO_MESSAGE && messCode != MESSAGE_OPERATION_IN_PROGRESS)
                     emit add2systemLog(sessionId, (MatildaMessages::messFromCode(messCode)));
                 emit add2systemLog(sessionId, MatildaMessages::addRez2endOfLine(MatildaMessages::name4command(command), rezIsGood));
             }
@@ -783,11 +783,11 @@ int SvahaSocket::onCOMMAND_ERROR_CODE(const QVariantHash &h, bool &rezIsGood)
 {
     rezIsGood = !h.isEmpty();
     if(!rezIsGood)
-        return MESS_CORRUPTED_DATA;
+        return MESSAGE_CORRUPTED_DATA;
 
-//    QString commandName;// = ShowMessHelperCore::name4command(h.value("lcmd").toInt());
+//    QString commandName;// = ShowMessageHelperCore::name4command(h.value("lcmd").toInt());
 
-    const QString mess = getErrMess(h.value("e").toInt(), QString::number(h.value("lcmd").toInt()));
+    const QString messageStrr = getErrMess(h.value("e").toInt(), QString::number(h.value("lcmd").toInt()));
 
     if(h.value("lcmd").toInt() == COMMAND_WRITE_DA_OPEN_CLOSE){
         if(h.value("e").toInt() == ERR_NO_ERROR){
@@ -796,7 +796,7 @@ int SvahaSocket::onCOMMAND_ERROR_CODE(const QVariantHash &h, bool &rezIsGood)
             else
                 emit onSvahaSocketReady(sessionId, socketStamp);
             daOpened = true;
-            return MESS_NO_MESS;
+            return MESSAGE_NO_MESSAGE;
         }
         rezIsGood = false;
     }
@@ -804,27 +804,27 @@ int SvahaSocket::onCOMMAND_ERROR_CODE(const QVariantHash &h, bool &rezIsGood)
     switch(h.value("lcmd").toInt()){
     case COMMAND_READ_METER_LIST_FRAMED   :
     case COMMAND_WRITE_METER_LIST_FRAMED  :
-    case COMMAND_WRITE_METER_LIST_ONE_PART: emit showMess(sessionId, mess);emit add2systemLog(sessionId, mess); break;
+    case COMMAND_WRITE_METER_LIST_ONE_PART: emit showMessage(sessionId, messageStrr);emit add2systemLog(sessionId, messageStrr); break;
     }
 
     if((h.value("e").toInt() == ERR_NO_ERROR || h.value("e").toInt() == ERR_NO_DATA) && h.value("lcmd").toInt() == COMMAND_WRITE_METER_LIST_ONE_PART){
-        emit uploadProgress(sessionId, 100, mess);
+        emit uploadProgress(sessionId, 100, messageStrr);
     }
     stopAllSlot();
     onDisconn();
     QTimer::singleShot(555, this, SLOT(deleteLater()) );
-    return MESS_NO_MESS;
+    return MESSAGE_NO_MESSAGE;
 }
 //------------------------------------------------------------------------------------------
 int SvahaSocket::onCOMMAND_ERROR_CODE_EXT(const QVariantHash &h, bool &rezIsGood)
 {
     rezIsGood = !h.isEmpty();
     if(!rezIsGood)
-        return MESS_CORRUPTED_DATA;
+        return MESSAGE_CORRUPTED_DATA;
 
     bool addRedLine = true;
 
-    QString mess = getErrMess(h.value("e").toInt(), QString::number(h.value("lcmd").toInt()));
+    QString messageStrr = getErrMess(h.value("e").toInt(), QString::number(h.value("lcmd").toInt()));
 
     if(h.value("lcmd").toInt() == COMMAND_WRITE_DA_OPEN_CLOSE){
         if(h.value("e").toInt() == ERR_NO_ERROR){
@@ -833,38 +833,38 @@ int SvahaSocket::onCOMMAND_ERROR_CODE_EXT(const QVariantHash &h, bool &rezIsGood
             else
                 emit onSvahaSocketReady(sessionId, socketStamp);
             daOpened = true;
-            return MESS_NO_MESS;
+            return MESSAGE_NO_MESSAGE;
         }
         rezIsGood = false;
     }
 
     if(addRedLine){
-//        mess = ShowMessHelperCore::addWithFontColorRed(mess);
+//        messageStrr = ShowMessageHelperCore::addWithFontColorRed(messageStrr);
         if(!h.value("em").toString().isEmpty())
-            mess.append(tr(". Device: %1").arg(h.value("em").toString()) + "(");
+            messageStrr.append(tr(". Device: %1").arg(h.value("em").toString()) + "(");
     }
 
     if(!h.value("em").toString().isEmpty())
-        mess.append(tr(". Device: %1").arg(h.value("em").toString()));
+        messageStrr.append(tr(". Device: %1").arg(h.value("em").toString()));
 
     if(addRedLine && !h.value("em").toString().isEmpty())
-        mess.append("(");
+        messageStrr.append("(");
 
     switch(h.value("lcmd").toInt()){
     case COMMAND_READ_METER_LIST_FRAMED   :
     case COMMAND_WRITE_METER_LIST_FRAMED  :
-    case COMMAND_WRITE_METER_LIST_ONE_PART: emit showMess(sessionId, mess);emit add2systemLog(sessionId, mess); break;
+    case COMMAND_WRITE_METER_LIST_ONE_PART: emit showMessage(sessionId, messageStrr);emit add2systemLog(sessionId, messageStrr); break;
     }
 
     if((h.value("e").toInt() == ERR_NO_ERROR || h.value("e").toInt() == ERR_NO_DATA) && h.value("lcmd").toInt() == COMMAND_WRITE_METER_LIST_ONE_PART){
-        emit uploadProgress(sessionId, 100, mess);
+        emit uploadProgress(sessionId, 100, messageStrr);
     }
 
     stopAllSlot();
     onDisconn();
     QTimer::singleShot(555, this, SLOT(deleteLater()) );
 
-    return MESS_NO_MESS;
+    return MESSAGE_NO_MESSAGE;
 }
 //------------------------------------------------------------------------------------------
 int SvahaSocket::onCOMMAND_READ_METER_LIST_FRAMED(const QVariantHash &h, bool &rezIsGood)
@@ -873,7 +873,7 @@ int SvahaSocket::onCOMMAND_READ_METER_LIST_FRAMED(const QVariantHash &h, bool &r
 
     rezIsGood = !h.isEmpty();
     if(!rezIsGood)
-        return MESS_CORRUPTED_DATA;
+        return MESSAGE_CORRUPTED_DATA;
 
     const bool ignoreEmptyList = h.contains("t");
     QStringList lHeader;
@@ -891,7 +891,7 @@ int SvahaSocket::onCOMMAND_READ_METER_LIST_FRAMED(const QVariantHash &h, bool &r
 
     if((l.isEmpty() || !h.contains("i")) && !ignoreEmptyList){
         rezIsGood = false;
-        return MESS_CORRUPTED_DATA;
+        return MESSAGE_CORRUPTED_DATA;
     }
 
     const QStringList k = key2header.value("getKeysMeterList");// MatildaDataKeys::getKeysMeterList().split(',');//"model,SN,NI,memo,passwd,on,politic,trff,crdnts,vrsn, grp, pwrn,tc,dta"
@@ -933,7 +933,7 @@ int SvahaSocket::onCOMMAND_READ_METER_LIST_FRAMED(const QVariantHash &h, bool &r
         QVariantHash hash;
         hash.insert("i", lastIndx);
         mWriteToSocket(hash, COMMAND_READ_METER_LIST_FRAMED);
-        return MESS_OPERATION_IN_PROGRESS;
+        return MESSAGE_OPERATION_IN_PROGRESS;
 
     }else{ //-1 read done
         doneTables = totalTables;
@@ -944,7 +944,7 @@ int SvahaSocket::onCOMMAND_READ_METER_LIST_FRAMED(const QVariantHash &h, bool &r
 
 
 
-    return MESS_NO_MESS;
+    return MESSAGE_NO_MESSAGE;
 }
 //------------------------------------------------------------------------------------------
 int SvahaSocket::onCOMMAND_WRITE_METER_LIST_FRAMED(const QVariantHash &h, bool &rezIsGood, const bool firstWrite)
@@ -954,7 +954,7 @@ int SvahaSocket::onCOMMAND_WRITE_METER_LIST_FRAMED(const QVariantHash &h, bool &
     }else{
         rezIsGood = !h.isEmpty();
         if(!rezIsGood)
-            return MESS_CORRUPTED_DATA;
+            return MESSAGE_CORRUPTED_DATA;
     }
 
     const QVariantList listCache = hashMemoWrite.value(COMMAND_WRITE_METER_LIST_FRAMED).value("lv").toList();
@@ -970,7 +970,7 @@ int SvahaSocket::onCOMMAND_WRITE_METER_LIST_FRAMED(const QVariantHash &h, bool &
     }else{
         if(lastIndx >= rowCount || lastIndx < 0){
             rezIsGood = false;
-            return MESS_CORRUPTED_DATA;
+            return MESSAGE_CORRUPTED_DATA;
         }
     }
 
@@ -988,7 +988,7 @@ int SvahaSocket::onCOMMAND_WRITE_METER_LIST_FRAMED(const QVariantHash &h, bool &
                 hh.insert(k.at(col), QString(""));
         }
 
-        dataLen += SerializedDataCalculation::chkMessSize(hh);
+        dataLen += SerializedDataCalculation::chkMessageSize(hh);
         if(j > 0 && dataLen >= maxDataLen){
             if(row < rowCount)
                 newLastIndx = row - 1;
@@ -1014,7 +1014,7 @@ int SvahaSocket::onCOMMAND_WRITE_METER_LIST_FRAMED(const QVariantHash &h, bool &
         lastWriteVarZero = hash;
     mWriteToSocket(hash, COMMAND_WRITE_METER_LIST_FRAMED);
 
-    return MESS_OPERATION_IN_PROGRESS;
+    return MESSAGE_OPERATION_IN_PROGRESS;
 }
 
 int SvahaSocket::onCOMMAND_READ_LEDLAMPLIST_FRAMED(const QVariantHash &h, bool &rezIsGood)
@@ -1032,7 +1032,7 @@ int SvahaSocket::onCOMMAND_WRITE_LEDLAMPLIST_FRAMED(const QVariantHash &h, bool 
     }else{
         rezIsGood = !h.isEmpty();
         if(!rezIsGood)
-            return MESS_CORRUPTED_DATA;
+            return MESSAGE_CORRUPTED_DATA;
     }
 
     QVariantList listCache = hashMemoWrite.value(COMMAND_WRITE_LEDLAMPLIST_FRAMED).value("lv").toList();
@@ -1048,7 +1048,7 @@ int SvahaSocket::onCOMMAND_WRITE_LEDLAMPLIST_FRAMED(const QVariantHash &h, bool 
     }else{
         if(lastIndx >= rowCount || lastIndx < 0){
             rezIsGood = false;
-            return MESS_CORRUPTED_DATA;
+            return MESSAGE_CORRUPTED_DATA;
         }
     }
 
@@ -1066,7 +1066,7 @@ int SvahaSocket::onCOMMAND_WRITE_LEDLAMPLIST_FRAMED(const QVariantHash &h, bool 
                 hh.insert(k.at(col), QString(""));
         }
 
-        dataLen += SerializedDataCalculation::chkMessSize(hh);
+        dataLen += SerializedDataCalculation::chkMessageSize(hh);
         if(j > 0 && dataLen >= maxDataLen){
             if(row < rowCount)
                 newLastIndx = row - 1;
@@ -1094,14 +1094,14 @@ int SvahaSocket::onCOMMAND_WRITE_LEDLAMPLIST_FRAMED(const QVariantHash &h, bool 
         lastWriteVarZero = hash;
     mWriteToSocket(hash, COMMAND_WRITE_LEDLAMPLIST_FRAMED);
 
-    return MESS_OPERATION_IN_PROGRESS;
+    return MESSAGE_OPERATION_IN_PROGRESS;
 }
 
 int SvahaSocket::readFramedList(const QVariantHash &h, bool &rezIsGood, const QStringList &humanHeaders, const QStringList &lk, const quint16 &command, const QString &listName)
 {
     rezIsGood = !h.isEmpty();
     if(!rezIsGood)
-        return MESS_CORRUPTED_DATA;
+        return MESSAGE_CORRUPTED_DATA;
 
     bool ignoreEmptyList = h.contains("t");
     QStringList lHeader;
@@ -1120,7 +1120,7 @@ int SvahaSocket::readFramedList(const QVariantHash &h, bool &rezIsGood, const QS
 
     if((l.isEmpty() || !h.contains("i")) && !ignoreEmptyList){
         rezIsGood = false;
-        return MESS_CORRUPTED_DATA;
+        return MESSAGE_CORRUPTED_DATA;
     }
 
     if(command == COMMAND_READ_LEDLAMPLIST_FRAMED){
@@ -1188,7 +1188,7 @@ int SvahaSocket::readFramedList(const QVariantHash &h, bool &rezIsGood, const QS
         QVariantHash hash;
         hash.insert("i", lastIndx);
         mWriteToSocket(hash, command);
-        return MESS_OPERATION_IN_PROGRESS;
+        return MESSAGE_OPERATION_IN_PROGRESS;
 
     }else{ //-1 read done
         doneTables = totalTables;
@@ -1198,7 +1198,7 @@ int SvahaSocket::readFramedList(const QVariantHash &h, bool &rezIsGood, const QS
 
 
 
-    return MESS_NO_MESS;
+    return MESSAGE_NO_MESSAGE;
 }
 //------------------------------------------------------------------------------------------
 QVariantHash SvahaSocket::errCodeLastOperation(const quint16 &command, const int &errCode) const

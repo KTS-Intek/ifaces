@@ -124,7 +124,7 @@ void SvahaServiceConnector::connect2hostViaSvaha(QVariantHash oneProfile, const 
         connect(socket, SIGNAL(add2systemLog(quint8,QString)), this, SLOT(add2systemLogSlot(quint8,QString)) );
         connect(socket, SIGNAL(onSvahaSocketReady(quint8,QString)), this, SLOT(onSvahaSocketReady(quint8,QString)), Qt::DirectConnection );
         connect(socket, SIGNAL(onYouCanSelectDevice(quint8,QStringList)), this, SLOT(onYouCanSelectDevice(quint8,QStringList)) );
-        connect(socket, SIGNAL(showMess(quint8,QString)), this, SLOT(showMessS(quint8,QString)) );
+        connect(socket, SIGNAL(showMessage(quint8,QString)), this, SLOT(showMessS(quint8,QString)) );
 
 
         if(!hashMemoWrite.isEmpty()){
@@ -372,11 +372,11 @@ void SvahaServiceConnector::startWait4connInThread()
             return;
         }
         if(getLastSelDevList().isEmpty()){
-            emit showMess(tr("Couldn't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
+            emit showMessage(tr("Couldn't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
             emit add2systemLog(tr("Couldn't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
 
         }else{
-            emit showMess(tr("Couldn't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
+            emit showMessage(tr("Couldn't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
             emit add2systemLog(tr("Couldn't connect to the device. %1. Error: %2.").arg(getLastConnDev()).arg(errorString()));
 
         }
@@ -395,11 +395,11 @@ void SvahaServiceConnector::softDelete()
  QTimer::singleShot(55555, this, SLOT(deleteLater()) );
 }
 //-----------------------------------------------------------------------
-void SvahaServiceConnector::showMessS(quint8 sessionId, QString mess)
+void SvahaServiceConnector::showMessS(quint8 sessionId, QString messageStrr)
 {
     if(sessionId != this->sessionId )
         return;
-    emit showMess(mess);
+    emit showMessage(messageStrr);
 }
 
 void SvahaServiceConnector::setHeader4map(QString key, QStringList header)

@@ -10,19 +10,19 @@ MatildaMessages::MatildaMessages(QObject *parent) : QObject(parent)
 //-------------------------------------------------------------------------------------------------------------------------------------
 QString MatildaMessages::messFromCode(const int &messCode)
 {
-    QString mess;
+    QString messageStrr;
     switch(messCode){
-    case MESS_NO_TABLE: mess = tr("There is no table for this period("); break;
-    case MESS_CORRUPTED_DATA: mess = tr("Corrupted data("); break;
-    case MESS_CORRUPTED_PACKET: mess = tr("Corrupted packet("); break;
-    case MESS_NO_ANSWER_FROM_DEVICE: mess = tr("There is no answer from the device("); break;
-    case MESS_NO_DATA: mess = tr("Data is not found("); break;
-    case MESS_OPERATION_ABORTED: mess = tr("Operation aborted"); break;
-    case MESS_CANT_CONNECT2DEV: mess = tr("Couldn't connect to the device("); break;
+    case MESSAGE_NO_TABLE: messageStrr = tr("There is no table for this period("); break;
+    case MESSAGE_CORRUPTED_DATA: messageStrr = tr("Corrupted data("); break;
+    case MESSAGE_CORRUPTED_PACKET: messageStrr = tr("Corrupted packet("); break;
+    case MESSAGE_NO_ANSWER_FROM_DEVICE: messageStrr = tr("There is no answer from the device("); break;
+    case MESSAGE_NO_DATA: messageStrr = tr("Data is not found("); break;
+    case MESSAGE_OPERATION_ABORTED: messageStrr = tr("Operation aborted"); break;
+    case MESSAGE_CANT_CONNECT2DEV: messageStrr = tr("Couldn't connect to the device("); break;
 
 
     }
-    return mess;
+    return messageStrr;
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------
@@ -184,7 +184,7 @@ QString MatildaMessages::name4command(const quint16 &command)
 
     case COMMAND_GET_BACKUP_FILE                : s = tr("get backup file")     ; break;
     case COMMAND_PUSH_BACKUP_FILE_AND_APPLY     : s = tr("send backup file")    ; break;
-    case COMMAND_WRITE_SVAHA_KILL_CLIENT        : s = tr("diconnecting the client")    ; break;
+    case COMMAND_WRITE_M2MSRVS_KILL_CLIENT        : s = tr("diconnecting the client")    ; break;
     default: s = QString("MTDCommand: %1").arg(command); break;
     }
 

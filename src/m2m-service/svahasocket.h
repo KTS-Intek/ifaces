@@ -43,7 +43,7 @@ signals:
 
     void onCOMMAND2GUI(quint8 sessionId, quint16 command, QVariantHash varHash);
 
-    void showMess(quint8 sessionId, QString mess);
+    void showMessage(quint8 sessionId, QString messageStrr);
 
     void appendLedLampListVar(quint8 sessionId, QVariantList listvar);
 
@@ -123,7 +123,7 @@ private:
         bool cmMAC;
         int timeOut;
         int timeOutB;
-        QString login;\
+        QString login;
         QString password;
         bool useMac;
 
