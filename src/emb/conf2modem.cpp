@@ -65,6 +65,12 @@ Conf2modem::RezUpdateConnSettings Conf2modem::convertFromVarMapExt(const QVarian
         std::sort(lk.begin(), lk.end());
         for(int i = 0, imax = lk.size(); i < imax; i++)
             ifaceParams.append(QString("%1\n%2\n\r\n").arg(lk.at(i)).arg(connSett.m2mhash.value(lk.at(i)).toString()));
+
+
+        const quint16 ch = interfaceSettings.value("settext").toUInt();
+        if(ch > 0)
+            ifaceParams.append(QString("ch-%1\n\r\n").arg(int(ch)));
+
         break;}
 
     default :{
@@ -103,7 +109,7 @@ bool Conf2modem::openAconnection(const ZbyrConnSett &connSett, QString &connline
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
 #ifndef DISABLE_M2M_MODULE
-    case IFACECONNTYPE_M2MCLNT : r = openM2mConnection(connSett.disableAPImode, connSett.m2mhash); break;
+    case IFACECONNTYPE_M2MCLNT : r = openM2mConnection(connSett.disableAPImode, connSett.m2mhash, connSett.settext); break;
 #endif
 
 #ifndef DISABLE_SERIALPORT_MODE

@@ -173,7 +173,7 @@ public:
 
 
 #ifndef DISABLE_M2M_MODULE
-    bool openM2mConnection(const bool &workWithoutAPI, const QVariantHash &oneProfile);
+    bool openM2mConnection(const bool &workWithoutAPI, const QVariantHash &oneProfile, const QVariant &settext);
 #endif
 
 #ifndef DISABLE_SERIALPORT_MODE

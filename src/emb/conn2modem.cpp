@@ -573,15 +573,21 @@ bool Conn2modem::openTcpConnection(const bool &workWithoutAPI, const QString &ho
 #ifdef ENABLE_EXTSUPPORT_OF_IFACES
 
 #ifndef DISABLE_M2M_MODULE
-bool Conn2modem::openM2mConnection(const bool &workWithoutAPI, const QVariantHash &oneProfile)
+bool Conn2modem::openM2mConnection(const bool &workWithoutAPI, const QVariantHash &oneProfile, const QVariant &settext)
 {
+    //settext = m2mDAchannel
+
+    bool okChannel = false;
+    const quint16 m2mDAchannel = settext.isValid() ? settext.toUInt(&okChannel) : 0;
+
+
     onDeviceDestr();//reset params
     emit openingAconnection();
     lastConnectionType = IFACECONNTYPE_M2MCLNT;
     stopAll = false;
 
     const int timeout = qMax(timeouts.global, 7000);
-    svahaConnector->connect2hostViaSvaha(oneProfile, timeout, timeouts.block);
+    svahaConnector->connect2hostViaSvaha(oneProfile, timeout, timeouts.block, m2mDAchannel);
     lModemState.workWithoutAPI = workWithoutAPI;
 
     const bool r = svahaConnector->waitForConnected(timeout);
