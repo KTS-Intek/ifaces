@@ -18,9 +18,10 @@
 #include "showmesshelper4wdgtdef.h"
 
 
-SvahaSocket::SvahaSocket(const quint8 &sesionId, QObject *parent) : QTcpSocket(parent)
+SvahaSocket::SvahaSocket(const quint8 &sesionId, const quint16 &m2mDAchannel, QObject *parent) : QTcpSocket(parent)
 {
     this->sessionId = sesionId;
+    this->m2mDAchannel = m2mDAchannel;
 }
 //------------------------------------------------------------------------------------------
 void SvahaSocket::setConnectionSett(const QString &host, const quint16 &port, const QString &objIdOrMac, const bool &cmMAC, const int &timeOut, const int &timeOutB,
@@ -624,7 +625,16 @@ void SvahaSocket::openDirectAccess()
 
     if(hashMemoWrite.isEmpty()){
     //відкриваю прямий доступ
-        mWriteToSocket(QVariant((int)1), COMMAND_WRITE_DA_OPEN_CLOSE);
+
+        //m2mDAchannel
+        // 0 - COMMAND_DA_CLOSE close
+        // 1 - COMMAND_DA_OPEN - main channel
+        //
+
+        if(m2mDAchannel < 1)
+            m2mDAchannel = 1;
+
+        mWriteToSocket(QVariant(int(m2mDAchannel)), COMMAND_WRITE_DA_OPEN_CLOSE);
     }else{
         int command = hashMemoWrite.keys().first();
         QVariantHash writeHash = hashMemoWrite.value(command);

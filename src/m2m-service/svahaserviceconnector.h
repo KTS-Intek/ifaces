@@ -21,7 +21,7 @@ public:
 
     QString getLastConnDev() const;
 
-    void connect2hostViaSvaha(QVariantHash oneProfile, const int &timeOut, const int &timeOutB);
+    void connect2hostViaSvaha(QVariantHash oneProfile, const int &timeOut, const int &timeOutB, const quint16 &m2mDAchannel);
 
     void setDoAfterConn(const int &command, const QVariantHash &s_data);
 

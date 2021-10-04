@@ -33,7 +33,7 @@ QString SvahaServiceConnector::getLastConnDev() const{   return lastConnDev; }
 
 
 //-----------------------------------------------------------------------
-void SvahaServiceConnector::connect2hostViaSvaha(QVariantHash oneProfile, const int &timeOut, const int &timeOutB)
+void SvahaServiceConnector::connect2hostViaSvaha(QVariantHash oneProfile, const int &timeOut, const int &timeOutB, const quint16 &m2mDAchannel)
 {
     if(needInit){
         needInit = false;
@@ -89,7 +89,7 @@ void SvahaServiceConnector::connect2hostViaSvaha(QVariantHash oneProfile, const 
         if(oneConnReady)
             break;
 
-        SvahaSocket *socket = new SvahaSocket(sessionId);
+        SvahaSocket *socket = new SvahaSocket(sessionId, m2mDAchannel);
         if(!hashMemoWrite.isEmpty())
             socket->setDoAfterConn(hashMemoWrite.keys().first(), hashMemoWrite.value(hashMemoWrite.keys().first()));
 

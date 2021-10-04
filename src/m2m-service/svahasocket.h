@@ -5,12 +5,15 @@
 #include <QTcpSocket>
 #include <QtCore>
 
+//it is ugly and it looks like shit, but it works)
 
 class SvahaSocket : public QTcpSocket
 {
         Q_OBJECT
 public:
-    explicit SvahaSocket(const quint8 &sesionId, QObject *parent = 0);
+    explicit SvahaSocket(const quint8 &sesionId, const quint16 &m2mDAchannel, QObject *parent = 0);
+
+
 
     QMap<QString,QStringList> key2header;
 
@@ -147,6 +150,7 @@ private:
     bool block4activeClient;
     bool iAmDone, noWriteData;
     quint8 sessionId;
+    quint16 m2mDAchannel;
     quint8 zombieRetr;
 
     //4 meter list
