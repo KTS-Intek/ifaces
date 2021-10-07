@@ -601,8 +601,23 @@ bool Conf2modem::writeSomeCommand(const QStringList &list2write, const bool &ent
 
         bool hasErr = false;
 
+
+
         for(int j = 0; j < jmax && !hasErr; j++){
-            writeATcommand(list2write.at(j));// "ATNR 5");
+            const QString command = list2write.at(j);
+            writeATcommand(command);// "ATNR 5");
+            const bool isATNRCommand = command.startsWith("ATNR", Qt::CaseInsensitive);
+            if(isATNRCommand && command.contains(" ")){
+                //this command needs more time
+                int sec = command.split(" ", QString::SkipEmptyParts).last().toInt();
+                if(sec < 1)
+                    sec = 5;
+                else if(sec > 20)
+                    sec = 20;
+                sec++;
+                QThread::sleep(sec);
+            }
+
             const QByteArray readarr = readDevice();
             if(readarr.startsWith("OK\r\n") || readarr.endsWith("OK\r\n"))
                 continue;
@@ -687,7 +702,7 @@ QMap<QString, QString> Conf2modem::getTheModemInfo(const QString &atcommand, con
 QMap<QString, QString> Conf2modem::getTheModemInfo(const QStringList &list2read, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr)
 {
     QMap<QString,QString> map;
-    if(!writeSomeCommand(QStringList(), true, false, false, tr("%1, entering the command mode").arg(operationName), errStr))
+    if(!writeSomeCommand(QStringList(), true, false, false, tr("%1, connection test").arg(operationName), errStr))
         return map;
 
     emit currentOperation(tr("Reading '%1'").arg(operationName));
