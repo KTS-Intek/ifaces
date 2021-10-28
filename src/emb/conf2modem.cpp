@@ -907,6 +907,8 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                         qDebug() << "enableDisableApi checkVal " << ok << tmpIntVal << readArr << la << listArr.at(la) << listVal.at(la);
                     if(stopAll)
                         return false;
+                    ifTrueATCN = false;
+
                     writeATcommand(listArr.at(la) + QString::number(listVal.at(la)));
                     if(readDevice().toUpper() != "OK\r\n"){
                         retryList++;
