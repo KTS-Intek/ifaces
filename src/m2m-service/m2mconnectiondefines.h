@@ -8,29 +8,29 @@
 #define MAX_M2M_ZOMBIE_RETRIES 2
 #define MAX_UNCOMPRSS_PACKET_SIZE  500
 
-//matilda protocol low level commands
-#define COMMAND_ZULU                            0
-#define COMMAND_YOUR_ID_AND_MAC                 1
+////matilda protocol low level commands
+//#define COMMAND_ZULU                            0
+//#define COMMAND_YOUR_ID_AND_MAC                 1
 
-#define COMMAND_AUTHORIZE                       2
+//#define COMMAND_AUTHORIZE                       2
 
-#define COMMAND_ACCESS_DENIED                   4
-#define COMMAND_CONNECT_2_THIS_SERVICE          5
-//#define COMMAND_LAST_OPER_RESULT                5
-#define COMMAND_I_AM_A_ZOMBIE                     6
-#define COMMAND_ERROR_CODE                      7
+//#define COMMAND_ACCESS_DENIED                   4
+//#define COMMAND_CONNECT_2_THIS_SERVICE          5
+////#define COMMAND_LAST_OPER_RESULT                5
+//#define COMMAND_I_AM_A_ZOMBIE                     6
+//#define COMMAND_ERROR_CODE                      7
 
-#define COMMAND_COMPRESSED_PACKET               8
-#define COMMAND_COMPRESSED_STREAM               9
-#define COMMAND_I_NEED_MORE_TIME                10
-#define COMMAND_CONNECT_ME_2_THIS_ID_OR_MAC     11
+//#define COMMAND_COMPRESSED_PACKET               8
+//#define COMMAND_COMPRESSED_STREAM               9
+//#define COMMAND_I_NEED_MORE_TIME                10
+//#define COMMAND_CONNECT_ME_2_THIS_ID_OR_MAC     11
 
 
-#define COMMAND_ERROR_CODE_EXT                  13
+//#define COMMAND_ERROR_CODE_EXT                  13
 
-//Backup Service (No authorization)
-#define COMMAND_CHECK_BACKUP_FILE_HASH_SUMM     14
-#define COMMAND_UNKNOWN                         15
+////Backup Service (No authorization)
+//#define COMMAND_CHECK_BACKUP_FILE_HASH_SUMM     14
+//#define COMMAND_UNKNOWN                         15
 
 
 

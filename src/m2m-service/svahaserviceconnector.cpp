@@ -5,7 +5,7 @@
 #include <QMutexLocker>
 
 //-----------------------------------------------------------------------
-SvahaServiceConnector::SvahaServiceConnector(QObject *parent) : QObject(parent)
+SvahaServiceConnector::SvahaServiceConnector(const bool &verboseMode, QObject *parent) : QObject(parent), verboseMode(verboseMode)
 {
     sessionId = 0;
     needInit = true;
@@ -89,7 +89,7 @@ void SvahaServiceConnector::connect2hostViaSvaha(QVariantHash oneProfile, const 
         if(oneConnReady)
             break;
 
-        SvahaSocket *socket = new SvahaSocket(sessionId, m2mDAchannel);
+        SvahaSocket *socket = new SvahaSocket(sessionId, m2mDAchannel, verboseMode);
         if(!hashMemoWrite.isEmpty())
             socket->setDoAfterConn(hashMemoWrite.keys().first(), hashMemoWrite.value(hashMemoWrite.keys().first()));
 

@@ -9,7 +9,7 @@ class SvahaServiceConnector : public QObject
 {
     Q_OBJECT
 public:
-    explicit SvahaServiceConnector(QObject *parent = 0);
+    explicit SvahaServiceConnector(const bool &verboseMode, QObject *parent = 0);
 
     ~SvahaServiceConnector();
 
@@ -128,6 +128,8 @@ private:
     QHash<int, QVariantHash> hashMemoWrite;
 
     QMap<QString,QStringList> key2header;
+
+    bool verboseMode;
 
 
 };

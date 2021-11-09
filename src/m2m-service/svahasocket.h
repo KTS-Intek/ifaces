@@ -11,9 +11,9 @@ class SvahaSocket : public QTcpSocket
 {
         Q_OBJECT
 public:
-    explicit SvahaSocket(const quint8 &sesionId, const quint16 &m2mDAchannel, QObject *parent = 0);
+    explicit SvahaSocket(const quint8 &sesionId, const quint16 &m2mDAchannel, const bool &verboseMode, QObject *parent = nullptr);
 
-
+    bool verboseMode;
 
     QMap<QString,QStringList> key2header;
 

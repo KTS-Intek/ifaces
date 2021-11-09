@@ -18,11 +18,14 @@
 #include "showmesshelper4wdgtdef.h"
 
 
-SvahaSocket::SvahaSocket(const quint8 &sesionId, const quint16 &m2mDAchannel, QObject *parent) : QTcpSocket(parent)
+SvahaSocket::SvahaSocket(const quint8 &sesionId, const quint16 &m2mDAchannel, const bool &verboseMode, QObject *parent) : QTcpSocket(parent)
 {
     this->sessionId = sesionId;
     this->m2mDAchannel = m2mDAchannel;
+    this->verboseMode = verboseMode;
+
 }
+
 //------------------------------------------------------------------------------------------
 void SvahaSocket::setConnectionSett(const QString &host, const quint16 &port, const QString &objIdOrMac, const bool &cmMAC, const int &timeOut, const int &timeOutB,
                                     const QString &login, const QString &pas, const bool &useMac)
@@ -165,7 +168,8 @@ void SvahaSocket::startConnection()
         connectToHost(socketSett.host, socketSett.port);
         if(waitForConnected(socketSett.timeOut)){
             socketStamp = QString("%1\t%2\t%3").arg(peerAddress().toString()).arg(socketDescriptor()).arg(QTime::currentTime().toString("hhmmsszzz"));
-            qDebug() << "bool isConnected " << block4activeClient;
+            if(verboseMode)
+                qDebug() << "bool isConnected " << block4activeClient;
             block4activeClient = false;
 
         }else{
@@ -193,12 +197,14 @@ void SvahaSocket::killSocketById(QString ignoreThisStamp)
         stopAllSlot();
         onDisconn();
     }
-    qDebug() << "killSocketById " << isActiveClient << stopAll << ignoreThisStamp << socketStamp;
+    if(verboseMode)
+        qDebug() << "killSocketById " << isActiveClient << stopAll << ignoreThisStamp << socketStamp;
 }
 //------------------------------------------------------------------------------------------
 void SvahaSocket::data2coordiantor(QByteArray writeArr)
 {
-    qDebug() << "data2coordiantor " << daOpened << writeArr << (state() == QAbstractSocket::ConnectedState);
+    if(verboseMode)
+        qDebug() << "data2coordiantor " << daOpened << writeArr << (state() == QAbstractSocket::ConnectedState);
     if(state() == QAbstractSocket::ConnectedState && daOpened){
         if(noWriteData && writeArr != "ATCN\r\n")
             noWriteData = false;
@@ -247,12 +253,14 @@ void SvahaSocket::decodeReadData(const QVariant &dataVar, const quint16 &command
         return;
     }
     if(command == COMMAND_I_AM_A_ZOMBIE){
-        qDebug() << "zombie echo" << peerAddress();
+        if(verboseMode)
+            qDebug() << "zombie echo" << peerAddress();
         zombieRetr = 0;
         return;
     }
     if(!dataVar.isValid()){
-        qDebug() << "!dataVar.isValid";
+        if(verboseMode)
+            qDebug() << "!dataVar.isValid";
         return;
     }
     zombieRetr = 0;
@@ -272,7 +280,8 @@ void SvahaSocket::decodeReadData(const QVariant &dataVar, const quint16 &command
     switch(command){
 
     case COMMAND_AUTHORIZE:{
-        qDebug() << "access = " << dataVar.toHash();
+        if(verboseMode)
+            qDebug() << "access = " << dataVar.toHash();
 
         QVariantHash h = dataVar.toHash();
 
@@ -329,7 +338,8 @@ void SvahaSocket::decodeReadData(const QVariant &dataVar, const quint16 &command
         return;}
 
     case COMMAND_I_AM_A_ZOMBIE:{
-        qDebug() << "zombie echo" << peerAddress();
+        if(verboseMode)
+            qDebug() << "zombie echo" << peerAddress();
 //        mWriteToSocket("", COMMAND_I_AM_A_ZOMBIE);
         return;}
 
@@ -390,7 +400,8 @@ void SvahaSocket::decodeReadDataJSON(const QByteArray &dataArr)
     QJsonDocument jDoc = QJsonDocument::fromJson( dataArr, &jErr);
 
     QVariantHash hash = jDoc.object().toVariantHash();
-    qDebug() << hash;
+    if(verboseMode)
+        qDebug() << hash;
 
     quint16 command = hash.take("cmd").toUInt();
 
@@ -406,8 +417,10 @@ void SvahaSocket::decodeReadDataJSON(const QByteArray &dataArr)
         }
     }
 
-    qDebug() << "decodeReadData" << command;
-    qDebug()  << jDoc.object();
+    if(verboseMode){
+        qDebug() << "decodeReadData" << command;
+        qDebug()  << jDoc.object();
+    }
 
     if(!messHshIsValid(jDoc.object(), dataArr)){
         onDisconn();
@@ -420,7 +433,8 @@ void SvahaSocket::decodeReadDataJSON(const QByteArray &dataArr)
 
         if(!isSvahaService && hash.value("name").toString() == "Matilda" && hash.value("version").toInt() > 0 && hash.value("version").toInt() >= MATILDA_PROTOCOL_VERSION_V1 && QDateTime::fromString(hash.value("UTC").toString(), "yyyy-MM-dd hh:mm:ss").isValid()){
             if(!hash.value("err").toString().isEmpty()){
-                qDebug() << hash.value("err").toString();
+                if(verboseMode)
+                    qDebug() << hash.value("err").toString();
                 emit add2systemLog( sessionId, tr("Authorization failed.<br>Your IP in block list.<br><br>Message from device:<br>%1").arg(hash.value("message").toString()));
                 onDisconn();
                 return;
@@ -470,7 +484,8 @@ void SvahaSocket::decodeReadDataJSON(const QByteArray &dataArr)
         break;}
 
     case COMMAND_I_AM_A_ZOMBIE:{
-        qDebug() << "zombie echo" << peerAddress();
+        if(verboseMode)
+            qDebug() << "zombie echo" << peerAddress();
 //        mWriteToSocket("", COMMAND_I_AM_A_ZOMBIE);
         return;}
 
@@ -479,7 +494,8 @@ void SvahaSocket::decodeReadDataJSON(const QByteArray &dataArr)
 
         if(hash.contains("sIp") && hash.contains("sP")){
             block4activeClient = true;
-            qDebug() << "close old connection " ;
+            if(verboseMode)
+                qDebug() << "close old connection " ;
 
             close();
 
@@ -487,7 +503,8 @@ void SvahaSocket::decodeReadDataJSON(const QByteArray &dataArr)
             connectToHost(hash.value("sIp").toString(), hash.value("sP").toUInt());
 
             if(waitForConnected(socketSett.timeOut)){
-                qDebug() << "bool isConnected " << block4activeClient;
+                if(verboseMode)
+                    qDebug() << "bool isConnected " << block4activeClient;
                 block4activeClient = false;
 
             }else{
@@ -524,7 +541,8 @@ void SvahaSocket::mWriteToSocket(const QVariant s_data, const quint16 s_command)
     }
 
     if(!isOpen()){
-        qDebug() << "matildaclient::mWriteToSocket connIsDown " << QTime::currentTime().toString("hh:mm:ss.zzz") << isOpen() << state();
+        if(verboseMode)
+            qDebug() << "matildaclient::mWriteToSocket connIsDown " << QTime::currentTime().toString("hh:mm:ss.zzz") << isOpen() << state();
         return;
     }
 
@@ -534,7 +552,8 @@ void SvahaSocket::mWriteToSocket(const QVariant s_data, const quint16 s_command)
     stopAll = false;
 
     if(s_command == COMMAND_ERROR_CODE || s_command == COMMAND_ERROR_CODE_EXT){
-        qDebug() << "block write " << s_command << s_data;
+        if(verboseMode)
+            qDebug() << "block write " << s_command << s_data;
         return;
     }
 
@@ -566,14 +585,17 @@ void SvahaSocket::mWriteToSocket(const QVariant s_data, const quint16 s_command)
         out << (quint32)0;
         out << (quint16)COMMAND_COMPRESSED_PACKET << QVariant(qCompress(blockUncompr,9));
         out.device()->seek(0);
-        qDebug() << "blSize " << blSize;
+        if(verboseMode)
+            qDebug() << "blSize " << blSize;
         quint32 blSize2 = block.size();
-        qDebug() << "blSize2 " << blSize2;
+        if(verboseMode)
+            qDebug() << "blSize2 " << blSize2;
         out << (quint32)(blSize2 - sizeof(quint32));
     }
 
     qint64 len = write(block);
-    qDebug() << "write " << QTime::currentTime().toString("hh:mm:ss.zzz") << len << s_command;
+    if(verboseMode)
+        qDebug() << "write " << QTime::currentTime().toString("hh:mm:ss.zzz") << len << s_command;
 
     waitForBytesWritten(50);
 
@@ -581,7 +603,8 @@ void SvahaSocket::mWriteToSocket(const QVariant s_data, const quint16 s_command)
 //------------------------------------------------------------------------------------------
 void SvahaSocket::onDisconn()
 {
-    qDebug() << "onDisconn" << ignoreThisDisconn << block4activeClient << socketStamp << sessionId;
+    if(verboseMode)
+        qDebug() << "onDisconn" << ignoreThisDisconn << block4activeClient << socketStamp << sessionId;
 
     if(stopAllDirect){
         block4activeClient = false;
@@ -640,7 +663,8 @@ void SvahaSocket::openDirectAccess()
         QVariantHash writeHash = hashMemoWrite.value(command);
 
         if(writeHash.isEmpty()){
-            qDebug() << "command not valid SvahaSocket::openDirectAccess( " << command << hashMemoWrite.value(command);
+            if(verboseMode)
+                qDebug() << "command not valid SvahaSocket::openDirectAccess( " << command << hashMemoWrite.value(command);
             deleteLater();
             return;
         }
@@ -656,7 +680,7 @@ void SvahaSocket::openDirectAccess()
         case COMMAND_READ_METER_LIST_FRAMED     : break;
         case COMMAND_WRITE_METER_LIST_ONE_PART  : break;
         case COMMAND_WRITE_METER_LIST_FRAMED    :{ bool ok; onCOMMAND_WRITE_METER_LIST_FRAMED(QVariantHash(), ok, true); return;}
-        default: qDebug() << "unknown command SvahaSocket::openDirectAccess( " << command << hashMemoWrite.keys(); deleteLater(); break;
+        default:{ if(verboseMode) qDebug() << "unknown command SvahaSocket::openDirectAccess( " << command << hashMemoWrite.keys(); deleteLater(); break;}
         }
 
         mWriteToSocket(writeHash, quint16 (command));
@@ -704,7 +728,8 @@ void SvahaSocket::mReadyReadF()
         }
 
         if(razivDuzkaL != razivDuzkaR || razivDuzkaL < 1){
-            qDebug()<< "readServer:"<< readarr;
+            if(verboseMode)
+                qDebug()<< "readServer:"<< readarr;
             return ;
         }else{
             int duzkaIndx = readarr.indexOf("}");
@@ -718,7 +743,9 @@ void SvahaSocket::mReadyReadF()
 
             }
         }
-        qDebug()<< "readServer2:"<< readAll();
+        readarr = readAll();
+        if(verboseMode)
+            qDebug()<< "readServer2:"<< readarr;
         return;
 
 
@@ -746,11 +773,14 @@ void SvahaSocket::mReadyReadF()
         waitForReadyRead(socketSett.timeOutB);
 
     }
-    qDebug() << "time2read " << bytesAvailable() << blockSize << timeG.elapsed();
+    if(verboseMode)
+        qDebug() << "time2read " << bytesAvailable() << blockSize << timeG.elapsed();
     if(bytesAvailable() < blockSize){
 //        qDebug()<<"clientConnection->bytesAvailable() != blockSize";
 
-        qDebug()<< "readServer:"<< bytesAvailable() << blockSize << readAll().toHex();
+        const QByteArray readArr = readAll();
+        if(verboseMode)
+            qDebug()<< "readServer:"<< bytesAvailable() << blockSize << readArr.toHex();
 
         return ;
     }
@@ -759,7 +789,8 @@ void SvahaSocket::mReadyReadF()
 
     if(bytesAvailable() == blockSize){
 
-        qDebug() << "good byte " << bytesAvailable() << blockSize ;
+        if(verboseMode)
+            qDebug() << "good byte " << bytesAvailable() << blockSize ;
         quint16 serverCommand;
         QVariant readVar;
 
@@ -774,7 +805,8 @@ void SvahaSocket::mReadyReadF()
         if(!inStrm.atEnd()){
             quint16 serverCommand;
             QVariant readVar;
-            qDebug() << "not good byte " << bytesAvailable() << blockSize ;
+            if(verboseMode)
+                qDebug() << "not good byte " << bytesAvailable() << blockSize ;
 
             inStrm >> serverCommand >> readVar;
             if(serverCommand == COMMAND_COMPRESSED_PACKET)
@@ -909,7 +941,8 @@ int SvahaSocket::onCOMMAND_READ_METER_LIST_FRAMED(const QVariantHash &h, bool &r
     const int iMax = l.size();
 
     int counterF = 0;
-    qDebug() << "meterSvahaKeys= " << k;
+    if(verboseMode)
+        qDebug() << "meterSvahaKeys= " << k;
     for(int i = 0, colMax = k.size(); i < iMax; i++){
         const QVariantHash h = l.at(i).toHash();
 
@@ -918,7 +951,8 @@ int SvahaSocket::onCOMMAND_READ_METER_LIST_FRAMED(const QVariantHash &h, bool &r
             m.append(h.value(k.at(col)).toString());
 
         m.insert(10, "");//grp
-        qDebug() << "meterSvaha=" << i << m;
+        if(verboseMode)
+            qDebug() << "meterSvaha=" << i << m;
         meters.append(m);
         counterF++;
 
@@ -1173,7 +1207,8 @@ int SvahaSocket::readFramedList(const QVariantHash &h, bool &rezIsGood, const QS
 
     }
 
-    qDebug() << "command "  << command << lastIndx << iMax << counterF;
+    if(verboseMode)
+        qDebug() << "command "  << command << lastIndx << iMax << counterF;
 
     if(meters.isEmpty() && lHeader.isEmpty() && lastIndx < 1){
         lHeader = humanHeaders;//.split(",");
@@ -1229,13 +1264,15 @@ bool SvahaSocket::messHshIsValid(const QJsonObject &jObj, QByteArray readArr)
         if(jObj.contains(lh.at(i))){
             hshIndx = i;
             hshName = lh.at(i);
-            qDebug() << "hash is " << hshName;
+            if(verboseMode)
+                qDebug() << "hash is " << hshName;
         }
     }
 
 
     if(hshIndx < 0){
-        qDebug() << "if(hshIndx < 0 " << hshIndx;
+        if(verboseMode)
+            qDebug() << "if(hshIndx < 0 " << hshIndx;
         return false;
     }else{
         lastHashSumm = hshIndx;
@@ -1243,15 +1280,19 @@ bool SvahaSocket::messHshIsValid(const QJsonObject &jObj, QByteArray readArr)
         QByteArray hshBase64;
         if(startIndx > 0){
             startIndx += hshName.length() + 4;
-            qDebug() << "hshName " << hshName << startIndx << readArr.mid(startIndx);
+            if(verboseMode)
+                qDebug() << "hshName " << hshName << startIndx << readArr.mid(startIndx);
 
             int endIndx = readArr.indexOf("\"", startIndx + 1);
-            qDebug() << "endIndx " << endIndx << readArr.mid(endIndx);
+            if(verboseMode)
+                qDebug() << "endIndx " << endIndx << readArr.mid(endIndx);
 
             hshBase64 = readArr.mid(startIndx , endIndx - startIndx);
-            qDebug() << hshBase64;
+            if(verboseMode)
+                qDebug() << hshBase64;
             readArr = readArr.left(startIndx ) + "0" + readArr.mid(endIndx);
-            qDebug() << readArr;
+            if(verboseMode)
+                qDebug() << readArr;
 
         }
         if(hshBase64.isEmpty())
@@ -1263,7 +1304,8 @@ bool SvahaSocket::messHshIsValid(const QJsonObject &jObj, QByteArray readArr)
         if(myHash == hshBase64){
             return true;
         }else{
-            qDebug() << "if(myHash != hshBase64 " << myHash.toBase64() << hshBase64.toBase64();
+            if(verboseMode)
+                qDebug() << "if(myHash != hshBase64 " << myHash.toBase64() << hshBase64.toBase64();
             return false;
         }
     }
@@ -1288,6 +1330,8 @@ qint64 SvahaSocket::mWrite2SocketJSON(QJsonObject jObj, const quint16 s_command,
         writeArr.chop(1);// remove }
     }
 
+
+if(verboseMode)
     qDebug() << "writeArr0 " << writeArr;
     switch(lastHashSumm){
     case 0: { writeArr.append(", \"Md4\":\""      + QCryptographicHash::hash( writeArr + ", \"Md4\":\"0\"}"     , QCryptographicHash::Md4     ).toBase64() + "\"}" ); break;}
@@ -1326,7 +1370,8 @@ qint64 SvahaSocket::mWrite2SocketJSON(QJsonObject jObj, const quint16 s_command,
             writeArr.chop(1);// remove }
         }
 
-        qDebug() << "writeArr1 comprs " << writeArr;
+        if(verboseMode)
+            qDebug() << "writeArr1 comprs " << writeArr;
         switch(lastHashSumm){
         case 0: { writeArr.append(", \"Md4\":\""      + QCryptographicHash::hash( writeArr + ", \"Md4\":\"0\"}"     , QCryptographicHash::Md4     ).toBase64() + "\"}" ); break;}
         case 2: { writeArr.append(", \"Sha1\":\""     + QCryptographicHash::hash( writeArr + ", \"Sha1\":\"0\"}"    , QCryptographicHash::Sha1    ).toBase64() + "\"}" ); break;}
@@ -1354,8 +1399,10 @@ qint64 SvahaSocket::mWrite2SocketJSON(QJsonObject jObj, const quint16 s_command,
 
     readAll();
     const qint64 len = write(writeArr);
-    qDebug() << "writeJSON " << QTime::currentTime().toString("hh:mm:ss.zzz");
-    qDebug() << writeArr;
+    if(verboseMode){
+        qDebug() << "writeJSON " << QTime::currentTime().toString("hh:mm:ss.zzz");
+        qDebug() << writeArr;
+    }
 
 
     waitForBytesWritten(50);
@@ -1366,7 +1413,8 @@ qint64 SvahaSocket::mWrite2SocketJSON(QJsonObject jObj, const quint16 s_command,
 //------------------------------------------------------------------------------------------
 QVariant SvahaSocket::uncompressRead(QByteArray readArr, quint16 &command, qint64 lenBefore)
 {
-    qDebug() << "uncompress command=" << command << readArr.size() << lenBefore;
+    if(verboseMode)
+        qDebug() << "uncompress command=" << command << readArr.size() << lenBefore;
 
     readArr = qUncompress(readArr);
     QVariant readVar;
@@ -1375,7 +1423,8 @@ QVariant SvahaSocket::uncompressRead(QByteArray readArr, quint16 &command, qint6
 
 
     outUncompr >> command >> readVar;
-    qDebug() << "uncompress command2=" << command << readArr.size();
+    if(verboseMode)
+        qDebug() << "uncompress command2=" << command << readArr.size();
     return readVar;
 }
 //------------------------------------------------------------------------------------------
