@@ -106,7 +106,7 @@ class IfaceExchangeSerializedTypes
 public:
     static void makeRegistration();
 
-    static ZbyrConnSett getZbyrConnSettFromArgs(const QStringList &list, bool &ok);
+    static ZbyrConnSett getZbyrConnSettFromArgs(const QStringList &list, const bool &verboseMode, bool &ok);
 
     static EMBZombieExchangeTypes getDefaultValues4zombie(const DeviceTimeouts &timeouts);
 

@@ -17,12 +17,12 @@ void IfaceExchangeSerializedTypes::makeRegistration()
     }
 
     if(!QMetaType::isRegistered(QMetaType::type("QHash<QString,QString>"))){
-        const int id = qRegisterMetaType<QHash<QString,QString> >("QHash<QString,QString>");
-        qDebug() << "TheLordOfBusV2 try registering QHash<QString,QString> id=" << id;
+        qRegisterMetaType<QHash<QString,QString> >("QHash<QString,QString>");
+
     }
 }
 
-ZbyrConnSett IfaceExchangeSerializedTypes::getZbyrConnSettFromArgs(const QStringList &list, bool &ok)
+ZbyrConnSett IfaceExchangeSerializedTypes::getZbyrConnSettFromArgs(const QStringList &list, const bool &verboseMode, bool &ok)
 {
     ok = true;
     ZbyrConnSett connSett;
@@ -41,7 +41,8 @@ ZbyrConnSett IfaceExchangeSerializedTypes::getZbyrConnSettFromArgs(const QString
                     valGood = true;
             }
             if(!valGood){
-                qDebug() << "Invalid argument -p";
+                if(verboseMode)
+                    qDebug() << "Invalid argument -p";
                 ok = false;
                 return connSett;
             }
@@ -64,12 +65,14 @@ ZbyrConnSett IfaceExchangeSerializedTypes::getZbyrConnSettFromArgs(const QString
                     const QUrl url(remAddr);
                     if(url.isValid() && !remAddr.isEmpty())
                         valGood = true;
-                    qDebug() << "remAddr=" << remAddr << haddr.toString() << haddr;
+                    if(verboseMode)
+                        qDebug() << "remAddr=" << remAddr << haddr.toString() << haddr;
                 }
 #endif
             }
             if(!valGood){
-                qDebug() << "Invalid argument -s" << remAddr ;
+                if(verboseMode)
+                    qDebug() << "Invalid argument -s" << remAddr ;
                 ok = false;
                 return connSett;
             }
