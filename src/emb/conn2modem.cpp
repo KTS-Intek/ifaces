@@ -1212,7 +1212,7 @@ void Conn2modem::createDevices()
 
     setIgnoreUartChecks(false);
 #ifndef DISABLE_M2M_MODULE
-    svahaConnector = new SvahaServiceConnector(this);
+    svahaConnector = new SvahaServiceConnector(verboseMode, this);
     connect(svahaConnector, SIGNAL(disconnected()), this, SIGNAL(onConnectionClosed()) );
 #endif
 
