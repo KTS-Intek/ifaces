@@ -344,7 +344,8 @@ void SvahaSocket::decodeReadData(const QVariant &dataVar, const quint16 &command
         return;}
 
     case COMMAND_ACCESS_DENIED:{
-        qDebug() << "access denied = " << dataVar.toBool();
+        if(verboseMode)
+            qDebug() << "access denied = " << dataVar.toBool();
         if(!dataVar.toBool()){
             emit add2systemLog( sessionId, tr("Access was denied."));
         }
