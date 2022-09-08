@@ -12,7 +12,7 @@
 
 Conn2modem::Conn2modem(const int &dbgExtSrcId, const bool &verboseMode, QObject *parent) : QObject(parent), dbgExtSrcId(dbgExtSrcId), verboseMode(verboseMode)
 {
-    activeDbgMessages = (dbgExtSrcId > 0);
+    activeDbgMessages = (dbgExtSrcId > 0); lastConnectionType = IFACECONNTYPE_UNKN;
     createDevices();
     onDeviceDestr();
 
@@ -454,7 +454,7 @@ qint64 Conn2modem::write2dev(const QByteArray &writeArr, const bool &ignoreDaAnd
     if(lModemState.lastWasATCNtest)
         lModemState.lastWasATCNtest = false;
     if(verboseMode)
-        qDebug() << "ZbyratorObject::write2dev " << lModemState.directAccess << writeArr.simplified() << writeArr.isEmpty() << writePreffix << lModemState.uartBlockPrtt;
+        qDebug() << "ZbyratorObject::write2dev " << lModemState.directAccess <<  writeArr.simplified() << writeArr.isEmpty() << writePreffix << lModemState.uartBlockPrtt;
 
     const bool isConnOk = isConnectionWorking();
 #ifdef ENABLE_VERBOSE_SERVER
@@ -1148,11 +1148,13 @@ void Conn2modem::activateAsyncModeExt(const quint8 &conntype)
         svahaConnector->setAsyncMode(true);
     }
 #endif
+#ifndef DISABLE_SERIALPORT_MODE
+
     if(conntype == IFACECONNTYPE_UART || conntype == IFACECONNTYPE_UNKN){
         connect(this, SIGNAL(detectedDisconnectedSerialPort()), this, SLOT(closeSerialPort()));
         connect(serialPort, SIGNAL(readyRead()), this, SIGNAL(readyRead()) );
     }
-
+#endif
 #endif
 
 }
@@ -1181,8 +1183,11 @@ void Conn2modem::deactivateAsyncMode()
     svahaConnector->setAsyncMode(false);
 #endif
 
+#ifndef DISABLE_SERIALPORT_MODE
+
     disconnect(serialPort, SIGNAL(readyRead()), this, SIGNAL(readyRead()) );
     disconnect(this, SIGNAL(detectedDisconnectedSerialPort()), this, SLOT(closeSerialPort()));
+#endif
 
 #endif
 }
@@ -1215,6 +1220,7 @@ void Conn2modem::createDevices()
     svahaConnector = new SvahaServiceConnector(verboseMode, this);
     connect(svahaConnector, SIGNAL(disconnected()), this, SIGNAL(onConnectionClosed()) );
 #endif
+#ifndef DISABLE_SERIALPORT_MODE
 
     serialPort = new QSerialPort(this);
 
@@ -1232,6 +1238,7 @@ void Conn2modem::createDevices()
     connect(this, SIGNAL(onConnectionDown()), checkPort, SLOT(terminate()) );
     connect(this, SIGNAL(onSerialPortOpened(QString)), checkPort, SLOT(zapuskalka(QString)) );
 //        connect(checkPort, &CheckCurrPort::appendMessage, this, &Conn2modem::currentOperation); //it is only for bugs
+#endif
 
 #endif
 }

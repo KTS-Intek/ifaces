@@ -82,6 +82,7 @@ HEADERS += \
     $$PWD/src/emb/peredavatorpriority.h \
     $$PWD/src/emb/conn2modem.h \
     $$PWD/src/emb/ifaceconnectiondefs.h \
+    $$PWD/src/emb/serial2tcpperedavator.h \
     $$PWD/src/shared/peredavatorpriority.h \
     $$PWD/src/emb/ifaceexchangetypesdefs.h \
     $$PWD/src/emb/embnodediscoverytypes.h \
@@ -93,4 +94,5 @@ SOURCES += \
     $$PWD/src/emb/ifaceexchange.cpp \
     $$PWD/src/emb/ifaceexchangeserializedtypes.cpp \
     $$PWD/src/emb/conn2modem.cpp \
-    $$PWD/src/emb/embnodediscoveryconverter.cpp
+    $$PWD/src/emb/embnodediscoveryconverter.cpp \
+    $$PWD/src/emb/serial2tcpperedavator.cpp
