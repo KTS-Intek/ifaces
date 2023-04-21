@@ -174,7 +174,7 @@ void SvahaServiceConnector::setDoAfterConn(const int &command, const QVariantHas
 bool SvahaServiceConnector::waitForConnected(const int &msec)
 {
 
-    QTime time;
+    QElapsedTimer time;
     time.start();
     for(int i = 0, t = 10; !oneConnReady && time.elapsed() < msec && i <= msec; i += t){
 
@@ -198,7 +198,7 @@ bool SvahaServiceConnector::waitForConnected(const int &msec)
 //-----------------------------------------------------------------------
 bool SvahaServiceConnector::waitForReadyRead(const int &msec)
 {
-    QTime time;
+    QElapsedTimer time;
     time.start();
     bool hasData = false;
     for(int i = -1, t = 10; time.elapsed() < msec && i < time.elapsed(); i += t){

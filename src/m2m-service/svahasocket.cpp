@@ -109,7 +109,7 @@ void SvahaSocket::startConnection()
 
             lastMacOrObjId = socketSett.objIdOrMac;
             lastUseMacAdd2conn = socketSett.cmMAC;
-#if QT_VERSION >= 0x050900
+#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
             loginPasswd.append(QCryptographicHash::hash( QVariant(socketSett.login.simplified().trimmed()).toByteArray(), QCryptographicHash::Keccak_256));
             loginPasswd.append(QCryptographicHash::hash( QVariant(socketSett.password.simplified().trimmed()).toByteArray(), QCryptographicHash::Keccak_256));
 #else
@@ -152,7 +152,7 @@ void SvahaSocket::startConnection()
 
         lastMacOrObjId = socketSett.objIdOrMac;
         lastUseMacAdd2conn = socketSett.cmMAC;
-#if QT_VERSION >= 0x050900
+#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
 
         loginPasswd.append(QCryptographicHash::hash( QVariant(socketSett.login.simplified().trimmed()).toByteArray(), QCryptographicHash::Keccak_256));
         loginPasswd.append(QCryptographicHash::hash( QVariant(socketSett.password.simplified().trimmed()).toByteArray(), QCryptographicHash::Keccak_256));
@@ -450,7 +450,7 @@ void SvahaSocket::decodeReadDataJSON(const QByteArray &dataArr)
                     QJsonObject jObj;
 
                     jObj.insert("version", hash.value("version").toInt());
-#if QT_VERSION >= 0x050900
+#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
                     jObj.insert("hsh", QString(QCryptographicHash::hash(loginPasswd.at(0) + "\n" + dataArr + "\n" + loginPasswd.at(1), QCryptographicHash::Keccak_256).toBase64()));
 #else
                     jObj.insert("hsh", QString(QCryptographicHash::hash(loginPasswd.at(0) + "\n" + dataArr + "\n" + loginPasswd.at(1), QCryptographicHash::Sha3_256).toBase64()));
@@ -711,14 +711,14 @@ void SvahaSocket::mReadyReadF()
     }
     if(!matildaLogined){
         QByteArray readarr = readAll();
-        QTime time;
+        QElapsedTimer time;
         time.start();
         int razivDuzkaL = readarr.count('{'), razivDuzkaR = readarr.count('}');
 
-        QTime timeG;
+        QElapsedTimer timeG;
         timeG.start();
 
-        while( razivDuzkaR < razivDuzkaL && readarr.size() < MAX_PACKET_LEN && time.elapsed() < socketSett.timeOutB && timeG.elapsed() < socketSett.timeOut && razivDuzkaL > 0){
+        while(( razivDuzkaR < razivDuzkaL) && readarr.size() < MAX_PACKET_LEN && time.elapsed() < socketSett.timeOutB && timeG.elapsed() < socketSett.timeOut && razivDuzkaL > 0){
             if(waitForReadyRead(socketSett.timeOutB)){
                 time.restart();
                 readarr.append(readAll());
@@ -767,7 +767,7 @@ void SvahaSocket::mReadyReadF()
 
     inStrm >> blockSize;
 
-    QTime timeG;
+    QElapsedTimer timeG;
     timeG.start();
     while(bytesAvailable() < blockSize && timeG.elapsed() < socketSett.timeOut){
 
@@ -1007,7 +1007,7 @@ int SvahaSocket::onCOMMAND_WRITE_METER_LIST_FRAMED(const QVariantHash &h, bool &
     const int rowCount = listCache.size();
 
     QVariantList l;
-    QStringList k = key2header.value("getKeysMeterList");// MatildaDataKeys::getKeysMeterList().split(' ', QString::SkipEmptyParts);
+    QStringList k = key2header.value("getKeysMeterList");// MatildaDataKeys::getKeysMeterList().split(' ', QString::SkipEmptyPart);
 
     int lastIndx = h.value("i").toInt();
     if(firstWrite){
@@ -1172,7 +1172,7 @@ int SvahaSocket::readFramedList(const QVariantHash &h, bool &rezIsGood, const QS
         emit appendLedLampListVar(sessionId, l);
     }
 
-    const QStringList k = lk;//.split(' ', QString::SkipEmptyParts);
+    const QStringList k = lk;//.split(' ', QString::SkipEmptyPart);
     QVariantList meters;
     int iMax = l.size();
 
@@ -1277,7 +1277,7 @@ bool SvahaSocket::messHshIsValid(const QJsonObject &jObj, QByteArray readArr)
         return false;
     }else{
         lastHashSumm = hshIndx;
-        int startIndx = readArr.indexOf(QString("\"%1\":").arg(hshName));
+        int startIndx = readArr.indexOf(QString("\"%1\":").arg(hshName).toLocal8Bit());
         QByteArray hshBase64;
         if(startIndx > 0){
             startIndx += hshName.length() + 4;
@@ -1341,7 +1341,7 @@ if(verboseMode)
     case 4: { writeArr.append(", \"Sha256\":\""   + QCryptographicHash::hash( writeArr + ", \"Sha256\":\"0\"}"  , QCryptographicHash::Sha256  ).toBase64() + "\"}" ); break;}
     case 5: { writeArr.append(", \"Sha384\":\""   + QCryptographicHash::hash( writeArr + ", \"Sha384\":\"0\"}"  , QCryptographicHash::Sha384  ).toBase64() + "\"}" ); break;}
     case 6: { writeArr.append(", \"Sha512\":\""   + QCryptographicHash::hash( writeArr + ", \"Sha512\":\"0\"}"  , QCryptographicHash::Sha512  ).toBase64() + "\"}" ); break;}
-#if QT_VERSION >= 0x050900
+#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
     case 7: { writeArr.append(", \"Sha3_224\":\"" + QCryptographicHash::hash( writeArr + ", \"Sha3_224\":\"0\"}", QCryptographicHash::Keccak_224).toBase64() + "\"}" ); break;}
     case 8: { writeArr.append(", \"Sha3_256\":\"" + QCryptographicHash::hash( writeArr + ", \"Sha3_256\":\"0\"}", QCryptographicHash::Keccak_256).toBase64() + "\"}" ); break;}
     case 9: { writeArr.append(", \"Sha3_384\":\"" + QCryptographicHash::hash( writeArr + ", \"Sha3_384\":\"0\"}", QCryptographicHash::Keccak_384).toBase64() + "\"}" ); break;}
@@ -1380,7 +1380,7 @@ if(verboseMode)
         case 4: { writeArr.append(", \"Sha256\":\""   + QCryptographicHash::hash( writeArr + ", \"Sha256\":\"0\"}"  , QCryptographicHash::Sha256  ).toBase64() + "\"}" ); break;}
         case 5: { writeArr.append(", \"Sha384\":\""   + QCryptographicHash::hash( writeArr + ", \"Sha384\":\"0\"}"  , QCryptographicHash::Sha384  ).toBase64() + "\"}" ); break;}
         case 6: { writeArr.append(", \"Sha512\":\""   + QCryptographicHash::hash( writeArr + ", \"Sha512\":\"0\"}"  , QCryptographicHash::Sha512  ).toBase64() + "\"}" ); break;}
-#if QT_VERSION >= 0x050900
+#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
 
         case 7: { writeArr.append(", \"Sha3_224\":\"" + QCryptographicHash::hash( writeArr + ", \"Sha3_224\":\"0\"}", QCryptographicHash::Keccak_224).toBase64() + "\"}" ); break;}
         case 8: { writeArr.append(", \"Sha3_256\":\"" + QCryptographicHash::hash( writeArr + ", \"Sha3_256\":\"0\"}", QCryptographicHash::Keccak_256).toBase64() + "\"}" ); break;}

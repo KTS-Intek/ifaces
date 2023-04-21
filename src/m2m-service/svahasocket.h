@@ -145,7 +145,7 @@ private:
     bool ignoreThisDisconn;
     bool isSvahaService;
     bool disconAfterAnswer;
-    QTime timeGalmo;
+    QElapsedTimer timeGalmo;
     bool matildaLogined;
     bool block4activeClient;
     bool iAmDone, noWriteData;
