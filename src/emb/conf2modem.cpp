@@ -1,7 +1,6 @@
 #include "conf2modem.h"
-#include <QTime>
+#include <QElapsedTimer>
 #include <QThread>
-
 #include "conf2modemhelper.h"
 #include "embeelimits.h"
 
@@ -18,11 +17,15 @@ Conf2modem::Conf2modem(const int &dbgExtSrcId, const bool &verboseMode, QObject 
 
 }
 
+//-------------------------------------------------------------------------------------
+
 Conf2modem::RezUpdateConnSettings Conf2modem::convertFromVarMap(const QVariantMap &interfaceSettings)
 {
     ZbyrConnSett connSett;
     return convertFromVarMapExt(interfaceSettings, connSett);
 }
+
+//-------------------------------------------------------------------------------------
 
 Conf2modem::RezUpdateConnSettings Conf2modem::convertFromVarMapExt(const QVariantMap &interfaceSettings, ZbyrConnSett connSett)
 {
@@ -257,9 +260,9 @@ bool Conf2modem::networkReset(QString &errStr)
    const bool r = writeSomeCommand(QString("ATNR 5").split("\t"), true, false, false, tr("Network reset"), errStr);
  #ifndef HASGUI4USR
    if(r){
-       QTime time;
+       QElapsedTimer time;
        time.start();
-       QTime locktime;
+       QElapsedTimer locktime;
        locktime.start();
        for(int i = 0; i < 60 && time.elapsed() < 30000; i++){
            if(lModemState.isMainConnectionUsed && !writePreffix.isEmpty() && locktime.elapsed() > 1000){
@@ -409,7 +412,7 @@ bool Conf2modem::nodeDiscovery(const int &totalModemCount, const qint64 &totalMs
 
 
     const qint64 timeout = 3 * 60 * 1000;// 155000;
-    QTime time;
+    QElapsedTimer time;
     time.start();
 
     bool wasInCommandMode = false;
@@ -499,7 +502,13 @@ bool Conf2modem::writeCommands2aModem(const QStringList &lcommands, QString &err
 {
     bool exitthecommandmode = true;
     if(!lcommands.isEmpty()){
-        const QStringList lexitcm = QString("ATLN ATNR ATFR ATCN ATAC ").split(" ", QString::SkipEmptyParts);
+        const QStringList lexitcm = QString("ATLN ATNR ATFR ATCN ATAC ").split(" ",
+                                                                       #if QT_VERSION >= 0x050900
+                                                                           Qt::SkipEmptyParts
+                                                                       #else
+                                                                           QString::SkipEmptyParts
+                                                                       #endif
+                                                                               );
         exitthecommandmode = !lexitcm.contains(lcommands.last().toUpper().left(4));
     }
 
@@ -532,7 +541,7 @@ bool Conf2modem::checkConnectionTool(const QString &ni, QString &errStr)
     const QByteArray writearr = QString("%1 D0\r\n").arg(ni).toUtf8();
     write2dev(writearr);
 
-    QTime time;
+    QElapsedTimer time;
     time.start();
     const int msecwait = qMax(timeouts.global, 7777);
 
@@ -567,7 +576,13 @@ bool Conf2modem::checkConnectionTool(const QString &ni, QString &errStr)
 
 bool Conf2modem::writeSomeCommand(const QString &atcommand, const bool &enterTheCommandMode, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr)
 {
-    return writeSomeCommand(atcommand.split("\n", QString::SkipEmptyParts), enterTheCommandMode, exitCommandMode, atfrAtTheEnd, operationName, errStr);
+    return writeSomeCommand(atcommand.split("\n",
+                                        #if QT_VERSION >= 0x050900
+                                            Qt::SkipEmptyParts
+                                        #else
+                                            QString::SkipEmptyParts
+                                        #endif
+                                            ), enterTheCommandMode, exitCommandMode, atfrAtTheEnd, operationName, errStr);
 }
 
 //-------------------------------------------------------------------------------------
@@ -609,7 +624,13 @@ bool Conf2modem::writeSomeCommand(const QStringList &list2write, const bool &ent
             const bool isATNRCommand = command.startsWith("ATNR", Qt::CaseInsensitive);
             if(isATNRCommand && command.contains(" ")){
                 //this command needs more time
-                int sec = command.split(" ", QString::SkipEmptyParts).last().toInt();
+                int sec = command.split(" ",
+                        #if QT_VERSION >= 0x050900
+                            Qt::SkipEmptyParts
+                        #else
+                            QString::SkipEmptyParts
+                        #endif
+                                        ).last().toInt();
                 if(sec < 1)
                     sec = 5;
                 else if(sec > 20)
@@ -662,7 +683,7 @@ bool Conf2modem::writeSomeCommand(const QStringList &list2write, const bool &ent
 bool Conf2modem::wait4doubleOk(const bool &isAtlbCommand, const bool &ignoreSecondErr)
 {
 
-    QTime time;
+    QElapsedTimer time;
     time.start();
     QByteArray readArr = readDevice().toUpper();
     if(readArr.isEmpty())
@@ -954,7 +975,13 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
         QStringList listAboutModem;
 
         if(readAboutZigBee){
-            listAboutModem = QString("ATAD ATPL ATCH ATID ATSH ATSL ATHV ATMD ATVR ATDB").split(" ", QString::SkipEmptyParts);
+            listAboutModem = QString("ATAD ATPL ATCH ATID ATSH ATSL ATHV ATMD ATVR ATDB").split(" ",
+                                                                                    #if QT_VERSION >= 0x050900
+                                                                                        Qt::SkipEmptyParts
+                                                                                    #else
+                                                                                        QString::SkipEmptyParts
+                                                                                    #endif
+                                                                                                );
             if(prosh > 203)
                 listAboutModem.append("ATHP");
 
@@ -987,7 +1014,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
                 if(listArr.at(i) == "ATDB" ){
 
 
-                    QTime time;
+                    QElapsedTimer time;
                     time.start();
                     for(int v = 0; v < 1000 && time.elapsed() < 30000 && !(readArr.contains("LQI:") && readArr.lastIndexOf("\r\n") > readArr.indexOf("LQI:") ); v++){
                         readArr.append(readDevice());
@@ -1025,7 +1052,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
             emit currentOperation(tr("Couldn't set up the modem"));
         }else{
             if(!ifTrueATCN){ //write ATFR
-                QTime time;
+                QElapsedTimer time;
                 time.start();
                 QByteArray readArr = readDevice().toUpper();
 
@@ -1137,7 +1164,13 @@ QStringList Conf2modem::processNdtLine(QString &line)
 {
 
 
-    const QStringList listSeperatist = line.split("\r\n", QString::SkipEmptyParts);
+    const QStringList listSeperatist = line.split("\r\n",
+                                              #if QT_VERSION >= 0x050900
+                                                  Qt::SkipEmptyParts
+                                              #else
+                                                  QString::SkipEmptyParts
+                                              #endif
+                                                  );
 
     if(!line.endsWith("\r\n") && !listSeperatist.isEmpty())
         line = listSeperatist.last();
@@ -1374,7 +1407,7 @@ void Conf2modem::processOneZombieCommand(const QString &command, EMBZombieExchan
 void Conf2modem::checkReadZombieCommand(const QString &command, EMBZombieExchangeTypes &zombiereadparams)
 {
 
-    QTime msecwait;
+    QElapsedTimer msecwait;
     msecwait.start();
 
     QList<QByteArray> listanswers;
@@ -1382,7 +1415,13 @@ void Conf2modem::checkReadZombieCommand(const QString &command, EMBZombieExchang
     int minl = 0;
     int tmsec = zombiereadparams.timeouts.global;
 
-    const QStringList list = command.split(" ", QString::SkipEmptyParts);
+    const QStringList list = command.split(" ",
+                                       #if QT_VERSION >= 0x050900
+                                           Qt::SkipEmptyParts
+                                       #else
+                                           QString::SkipEmptyParts
+                                       #endif
+                                           );
 
 
 
@@ -1524,7 +1563,13 @@ int Conf2modem::getTag4command(const QString &line, int lasttag)
 
 int Conf2modem::getTimeFromLine(const QString &command, bool &ok)
 {
-    const QString s = command.mid(3).simplified().trimmed().split(" ", QString::SkipEmptyParts).first();
+    const QString s = command.mid(3).simplified().trimmed().split(" ",
+                                                              #if QT_VERSION >= 0x050900
+                                                                  Qt::SkipEmptyParts
+                                                              #else
+                                                                  QString::SkipEmptyParts
+                                                              #endif
+                                                                  ).first();
     int msecwait = s.toInt(&ok);
     if(msecwait < 1 || !ok)
         return 0;
@@ -1538,7 +1583,7 @@ int Conf2modem::getTimeFromLine(const QString &command, bool &ok)
 
 void Conf2modem::checkMakeZombiePause(const QString &command)
 {
-    QTime time;
+    QElapsedTimer time;
     time.start();
     bool ok;
 
@@ -1603,7 +1648,13 @@ bool Conf2modem::quickRadioSetupExt(const QVariantMap &insettings, QString &errs
     if(!isCoordinatorReady4quickRadioSetupExt(insettings, mapAboutTheCoordinator, errstr))
         return false;
 
-    const QStringList listni = insettings.value("listni").toString().split(" ", QString::SkipEmptyParts);
+    const QStringList listni = insettings.value("listni").toString().split(" ",
+                                                                       #if QT_VERSION >= 0x050900
+                                                                           Qt::SkipEmptyParts
+                                                                       #else
+                                                                           QString::SkipEmptyParts
+                                                                       #endif
+                                                                           );
 
     if(listni.isEmpty()){
         errstr = tr("bad operator");
@@ -1708,7 +1759,7 @@ bool Conf2modem::isCoordinatorReady4quickRadioSetupExt(const QVariantMap &insett
          if(!writeSomeCommand(lcommands, true, true, true, tr("Writing the configuration"), errstr))
              return false;
 
-         QTime time;
+         QElapsedTimer time;
          time.start();
          emit currentOperation(tr("Waiting for the network readiness..."));
 
@@ -1933,7 +1984,13 @@ Conf2modem::EmbeeNetworkParamsStr Conf2modem::convert2netParams(const int &chann
 
 Conf2modem::EmbeeNetworkParamsStr Conf2modem::convert2netParams(const QVariantMap &map, const QString &keysChIdKy)
 {
-    return convert2netParams(map, keysChIdKy.split(" ", QString::SkipEmptyParts));
+    return convert2netParams(map, keysChIdKy.split(" ",
+                                               #if QT_VERSION >= 0x050900
+                                                   Qt::SkipEmptyParts
+                                               #else
+                                                   QString::SkipEmptyParts
+                                               #endif
+                                                   ));
 }
 
 Conf2modem::EmbeeNetworkParamsStr Conf2modem::convert2netParams(const QVariantMap &map, const QStringList &lkeysChIdKy)

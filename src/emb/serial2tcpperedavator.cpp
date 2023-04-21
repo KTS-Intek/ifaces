@@ -1,5 +1,5 @@
 #include "serial2tcpperedavator.h"
-#include <QTime>
+#include <QElapsedTimer>
 
 
 #ifdef HASSERIALLIB
@@ -177,7 +177,7 @@ QByteArray Serial2tcpPeredavator::mReadyReadTcpF()
 
 QByteArray Serial2tcpPeredavator::mReadyReadF(QIODevice *d, const int &timeout)
 {
-    QTime t, gt;
+    QElapsedTimer t, gt;
     gt.start();
     QByteArray a = d->readAll();
     if(timeout < 1)

@@ -21,7 +21,13 @@ QVariantHash conf2modemHelper::aboutZigBeeModem2humanReadable(const QVariantHash
     if(aboutModem.contains("ATDB") && aboutModem.value("ATDB").toString().contains("RSSI:") && aboutModem.value("ATDB").toString().contains("LQI:")){
         QString s = aboutModem.value("ATDB").toString();
         s = s.left( s.indexOf("LQI:") + 7 );
-        QStringList l = s.split("LQI:", QString::SkipEmptyParts);
+        QStringList l = s.split("LQI:",
+                        #if QT_VERSION >= 0x050900
+                            Qt::SkipEmptyParts
+                        #else
+                            QString::SkipEmptyParts
+                        #endif
+                                );
         s = l.first();
         s = s.mid(s.indexOf("RSSI:") + 5).simplified().trimmed();
         val = s.toInt(&ok);

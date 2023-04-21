@@ -2,7 +2,7 @@
 #include "embeelimits.h"
 #include "matildalimits.h"
 #include <QThread>
-#include <QTime>
+#include <QElapsedTimer>
 #include <QDebug>
 
 
@@ -157,7 +157,7 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
         return "";
 
 
-    QTime globalTime;
+    QElapsedTimer globalTime;
     globalTime.start();
 
     const int timeoutgeneral = timeouts.global;
@@ -165,7 +165,7 @@ QByteArray Conn2modem::readDevice(const QByteArray &endSymb, const bool &isQuick
 
     readArr = readAll();
 
-    QTime time;
+    QElapsedTimer time;
     time.start();
 
     const int endSymbLen = endSymb.length();
@@ -772,7 +772,7 @@ bool Conn2modem::request2modemOn()
 
 void Conn2modem::lSleep(const int &msleep)
 {
-    QTime time;
+    QElapsedTimer time;
     time.start();
     if(isConnectionWorking()){
         for(int i = msleep > 10 ? 10 : msleep; i < msleep && isConnectionWorking() && time.elapsed() < msleep; i += 10)
@@ -860,7 +860,8 @@ bool Conn2modem::isCoordinatorFree()
 
     const bool busy = lModemState.uartBlockPrtt;
 
-    QTime time; time.start();
+    QElapsedTimer time;
+    time.start();
 #ifdef ENABLE_VERBOSE_SERVER
     if(activeDbgMessages)  emit appendDbgExtData(dbgExtSrcId, QString("Conf2modem isCoordinatorFree da directAccess=%1, uartBlockPrtt=%2, myPrtt=%3, time=%4")
                                                  .arg(lModemState.directAccess).arg(lModemState.uartBlockPrtt).arg(QString(writePreffix)).arg(time.elapsed()));
@@ -926,7 +927,8 @@ bool Conn2modem::isCoordinatorFree()
 
 bool Conn2modem::isCoordinatorFreeWithRead()
 {
-    QTime time; time.start();
+    QElapsedTimer time;
+    time.start();
     if(isCoordinatorFree()){
 
         return true;

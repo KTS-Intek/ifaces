@@ -87,7 +87,13 @@ NodeDiscoveryStruct EmbNodeDiscoveryConverter::resetStruct(const QStringList &li
     lastNodediscoveryScan.limits = getLimitsFromAMap(atndmap.value("lmts").toMap());
     lastNodediscoveryScan.sett = modeSettToStruct(atndmap.value("sett").toMap());
 
-    lastNodediscoveryScan.mdls = atndmap.value("mdls").toString().split(" ", QString::SkipEmptyParts);
+    lastNodediscoveryScan.mdls = atndmap.value("mdls").toString().split(" ",
+                                                                    #if QT_VERSION >= 0x050900
+                                                                        Qt::SkipEmptyParts
+                                                                    #else
+                                                                        QString::SkipEmptyParts
+                                                                    #endif
+                                                                        );
     lastNodediscoveryScan.defs = atndmap.value("defs").toMap();
     return lastNodediscoveryScan;
 
