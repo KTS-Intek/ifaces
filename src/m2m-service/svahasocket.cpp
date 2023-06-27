@@ -74,6 +74,8 @@ QString SvahaSocket::getErrMess(const int &code, const QString &commandName)
     case ERR_RESOURCE_BUSY      : messageStrr = tr("Command: %1. Resource is busy").arg(commandName); break;
     case ERR_DA_CLOSED          : messageStrr = tr("Direct access was close");  break;
     case ERR_NO_ERROR           : messageStrr = tr("Command: %1. Done)").arg(commandName); break;
+    case ERR_NO_ERROR_DLG       : messageStrr = tr("Command: %1. Done)").arg(commandName); break;
+
     default: messageStrr = tr("Command: %1. Unknown error. Error code: %2").arg(commandName).arg(code); break;
     }
     return messageStrr;
@@ -833,7 +835,7 @@ int SvahaSocket::onCOMMAND_ERROR_CODE(const QVariantHash &h, bool &rezIsGood)
     const QString messageStrr = getErrMess(h.value("e").toInt(), QString::number(h.value("lcmd").toInt()));
 
     if(h.value("lcmd").toInt() == COMMAND_WRITE_DA_OPEN_CLOSE){
-        if(h.value("e").toInt() == ERR_NO_ERROR){
+        if(h.value("e").toInt() == ERR_NO_ERROR || h.value("e").toInt() == ERR_NO_ERROR_DLG){
             if(stopAllDirect)
                 onDisconn();
             else
@@ -850,7 +852,8 @@ int SvahaSocket::onCOMMAND_ERROR_CODE(const QVariantHash &h, bool &rezIsGood)
     case COMMAND_WRITE_METER_LIST_ONE_PART: emit showMessage(sessionId, messageStrr);emit add2systemLog(sessionId, messageStrr); break;
     }
 
-    if((h.value("e").toInt() == ERR_NO_ERROR || h.value("e").toInt() == ERR_NO_DATA) && h.value("lcmd").toInt() == COMMAND_WRITE_METER_LIST_ONE_PART){
+    if((h.value("e").toInt() == ERR_NO_ERROR || h.value("e").toInt() == ERR_NO_DATA || h.value("e").toInt() == ERR_NO_ERROR_DLG)
+            && h.value("lcmd").toInt() == COMMAND_WRITE_METER_LIST_ONE_PART){
         emit uploadProgress(sessionId, 100, messageStrr);
     }
     stopAllSlot();
@@ -870,7 +873,7 @@ int SvahaSocket::onCOMMAND_ERROR_CODE_EXT(const QVariantHash &h, bool &rezIsGood
     QString messageStrr = getErrMess(h.value("e").toInt(), QString::number(h.value("lcmd").toInt()));
 
     if(h.value("lcmd").toInt() == COMMAND_WRITE_DA_OPEN_CLOSE){
-        if(h.value("e").toInt() == ERR_NO_ERROR){
+        if(h.value("e").toInt() == ERR_NO_ERROR || h.value("e").toInt() == ERR_NO_ERROR_DLG){
             if(stopAllDirect)
                 onDisconn();
             else
@@ -899,7 +902,8 @@ int SvahaSocket::onCOMMAND_ERROR_CODE_EXT(const QVariantHash &h, bool &rezIsGood
     case COMMAND_WRITE_METER_LIST_ONE_PART: emit showMessage(sessionId, messageStrr);emit add2systemLog(sessionId, messageStrr); break;
     }
 
-    if((h.value("e").toInt() == ERR_NO_ERROR || h.value("e").toInt() == ERR_NO_DATA) && h.value("lcmd").toInt() == COMMAND_WRITE_METER_LIST_ONE_PART){
+    if((h.value("e").toInt() == ERR_NO_ERROR || h.value("e").toInt() == ERR_NO_DATA || h.value("e").toInt() == ERR_NO_ERROR_DLG)
+            && h.value("lcmd").toInt() == COMMAND_WRITE_METER_LIST_ONE_PART){
         emit uploadProgress(sessionId, 100, messageStrr);
     }
 

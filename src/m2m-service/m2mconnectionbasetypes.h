@@ -55,7 +55,7 @@ struct COMMAND_ZULU_STRUCT
 
     //caes 2 - error happend
     QString message;
-    int err;//ERR_IP_BLOCKED , if 0 ignore, ERR_NO_ERROR  99
+    int err;//ERR_IP_BLOCKED , if 0 ignore, ERR_NO_ERROR  99 AND ERR_NO_ERROR_DLG 98
 
     COMMAND_ZULU_STRUCT() : version(0), UOFT(0), QDS(0), BLC(0), CTCT(0), CNTR(0), RND(0) {}
 };
