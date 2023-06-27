@@ -106,7 +106,7 @@ struct ExchangeWithOneModemStat
     quint32 byte2meter;
     quint32 bytesFromMeter;
 
-    quint32 totalMessCounter;
+    quint32 totalMessageCounter;
     quint32 usflDataLen;
 
     qint32 badAnswerCounter;//empty or bad data, it resets by a good answer
@@ -118,7 +118,7 @@ struct ExchangeWithOneModemStat
     QTime time4poll;//час між новими завданнями
     QTime time4multicast;//час для паузи в обміні, для системи агрегатування
 
-    ExchangeWithOneModemStat() : byte2meter(0), bytesFromMeter(0), totalMessCounter(0), usflDataLen(0), badAnswerCounter(0), emptySequenceAnswerCounter(0)  {}
+    ExchangeWithOneModemStat() : byte2meter(0), bytesFromMeter(0), totalMessageCounter(0), usflDataLen(0), badAnswerCounter(0), emptySequenceAnswerCounter(0)  {}
 };
 
 

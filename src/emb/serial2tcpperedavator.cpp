@@ -165,9 +165,13 @@ bool Serial2tcpPeredavator::openTcp(const QStringList &hosts, const int &tcpPort
 
 QByteArray Serial2tcpPeredavator::mReadyReadSerialF()
 {
+    return
 #ifdef HASSERIALLIB
-    return mReadyReadF(serial, serialTimeout);
+     mReadyReadF(serial, serialTimeout)
+#else
+    QByteArray()
 #endif
+            ;
 }
 
 QByteArray Serial2tcpPeredavator::mReadyReadTcpF()
