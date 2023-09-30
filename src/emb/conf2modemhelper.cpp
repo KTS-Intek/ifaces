@@ -22,7 +22,7 @@ QVariantHash conf2modemHelper::aboutZigBeeModem2humanReadable(const QVariantHash
         QString s = aboutModem.value("ATDB").toString();
         s = s.left( s.indexOf("LQI:") + 7 );
         QStringList l = s.split("LQI:",
-                        #if QT_VERSION >= 0x050900
+                         #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
                             Qt::SkipEmptyParts
                         #else
                             QString::SkipEmptyParts

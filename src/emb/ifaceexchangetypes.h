@@ -3,7 +3,7 @@
 
 #include <QStringList>
 #include <QDateTime>
-#include <QTime>
+#include <QElapsedTimer>
 
 ///[!] ifaces
 #include "src/emb/conf2modem.h"
@@ -24,8 +24,8 @@ struct PollObjectState
     bool blockDb;//pollSett.blockDb = false;
     bool embeeReady;//wait4signalready
 
-    QTime blockTime;
-    QTime blockDbTime;
+    QElapsedTimer blockTime;
+    QElapsedTimer blockDbTime;
 
     bool updateAboutModemForced;//оновити на старті про координатор
 
@@ -101,7 +101,7 @@ struct ExchangeWithOneModemStat
     QDateTime startPollDate;//
 
     QStringList listWriteReadHistory;
-    QTime time4taskProcessing;//it counts  processing time for one task from the beggining to the end
+    QElapsedTimer time4taskProcessing;//it counts  processing time for one task from the beggining to the end
 
     quint32 byte2meter;
     quint32 bytesFromMeter;
@@ -114,9 +114,9 @@ struct ExchangeWithOneModemStat
 
     QHash<QByteArray,quint32> hashMessRetryCounter;
 
-    QTime timeFromEmptyChanged;//для аналізу порожніх відповідей
-    QTime time4poll;//час між новими завданнями
-    QTime time4multicast;//час для паузи в обміні, для системи агрегатування
+    QElapsedTimer timeFromEmptyChanged;//для аналізу порожніх відповідей
+    QElapsedTimer time4poll;//час між новими завданнями
+    QElapsedTimer time4multicast;//час для паузи в обміні, для системи агрегатування
 
     ExchangeWithOneModemStat() : byte2meter(0), bytesFromMeter(0), totalMessageCounter(0), usflDataLen(0), badAnswerCounter(0), emptySequenceAnswerCounter(0)  {}
 };

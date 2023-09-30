@@ -88,7 +88,7 @@ NodeDiscoveryStruct EmbNodeDiscoveryConverter::resetStruct(const QStringList &li
     lastNodediscoveryScan.sett = modeSettToStruct(atndmap.value("sett").toMap());
 
     lastNodediscoveryScan.mdls = atndmap.value("mdls").toString().split(" ",
-                                                                    #if QT_VERSION >= 0x050900
+                                                                     #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
                                                                         Qt::SkipEmptyParts
                                                                     #else
                                                                         QString::SkipEmptyParts

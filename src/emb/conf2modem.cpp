@@ -222,6 +222,8 @@ bool Conf2modem::enterCommandMode()
         if(isCommandModeAnswer(readArr))
             break;
 
+        if(stopAll)
+            return false;
 
         write2dev(dataP);
         readArr = readDevice();
@@ -503,7 +505,7 @@ bool Conf2modem::writeCommands2aModem(const QStringList &lcommands, QString &err
     bool exitthecommandmode = true;
     if(!lcommands.isEmpty()){
         const QStringList lexitcm = QString("ATLN ATNR ATFR ATCN ATAC ").split(" ",
-                                                                       #if QT_VERSION >= 0x050900
+                                                                        #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
                                                                            Qt::SkipEmptyParts
                                                                        #else
                                                                            QString::SkipEmptyParts
@@ -577,7 +579,7 @@ bool Conf2modem::checkConnectionTool(const QString &ni, QString &errStr)
 bool Conf2modem::writeSomeCommand(const QString &atcommand, const bool &enterTheCommandMode, const bool &exitCommandMode, const bool &atfrAtTheEnd, const QString &operationName, QString &errStr)
 {
     return writeSomeCommand(atcommand.split("\n",
-                                        #if QT_VERSION >= 0x050900
+                                         #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
                                             Qt::SkipEmptyParts
                                         #else
                                             QString::SkipEmptyParts
@@ -625,7 +627,7 @@ bool Conf2modem::writeSomeCommand(const QStringList &list2write, const bool &ent
             if(isATNRCommand && command.contains(" ")){
                 //this command needs more time
                 int sec = command.split(" ",
-                        #if QT_VERSION >= 0x050900
+                         #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
                             Qt::SkipEmptyParts
                         #else
                             QString::SkipEmptyParts
@@ -976,7 +978,7 @@ bool Conf2modem::enableDisableApi(const bool &enable, const bool &readAboutZigBe
 
         if(readAboutZigBee){
             listAboutModem = QString("ATAD ATPL ATCH ATID ATSH ATSL ATHV ATMD ATVR ATDB").split(" ",
-                                                                                    #if QT_VERSION >= 0x050900
+                                                                                     #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
                                                                                         Qt::SkipEmptyParts
                                                                                     #else
                                                                                         QString::SkipEmptyParts
@@ -1165,7 +1167,7 @@ QStringList Conf2modem::processNdtLine(QString &line)
 
 
     const QStringList listSeperatist = line.split("\r\n",
-                                              #if QT_VERSION >= 0x050900
+                                               #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
                                                   Qt::SkipEmptyParts
                                               #else
                                                   QString::SkipEmptyParts
@@ -1416,7 +1418,7 @@ void Conf2modem::checkReadZombieCommand(const QString &command, EMBZombieExchang
     int tmsec = zombiereadparams.timeouts.global;
 
     const QStringList list = command.split(" ",
-                                       #if QT_VERSION >= 0x050900
+                                        #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
                                            Qt::SkipEmptyParts
                                        #else
                                            QString::SkipEmptyParts
@@ -1564,7 +1566,7 @@ int Conf2modem::getTag4command(const QString &line, int lasttag)
 int Conf2modem::getTimeFromLine(const QString &command, bool &ok)
 {
     const QString s = command.mid(3).simplified().trimmed().split(" ",
-                                                              #if QT_VERSION >= 0x050900
+                                                               #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
                                                                   Qt::SkipEmptyParts
                                                               #else
                                                                   QString::SkipEmptyParts
@@ -1649,7 +1651,7 @@ bool Conf2modem::quickRadioSetupExt(const QVariantMap &insettings, QString &errs
         return false;
 
     const QStringList listni = insettings.value("listni").toString().split(" ",
-                                                                       #if QT_VERSION >= 0x050900
+                                                                        #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
                                                                            Qt::SkipEmptyParts
                                                                        #else
                                                                            QString::SkipEmptyParts
@@ -1985,7 +1987,7 @@ Conf2modem::EmbeeNetworkParamsStr Conf2modem::convert2netParams(const int &chann
 Conf2modem::EmbeeNetworkParamsStr Conf2modem::convert2netParams(const QVariantMap &map, const QString &keysChIdKy)
 {
     return convert2netParams(map, keysChIdKy.split(" ",
-                                               #if QT_VERSION >= 0x050900
+                                                #if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
                                                    Qt::SkipEmptyParts
                                                #else
                                                    QString::SkipEmptyParts
