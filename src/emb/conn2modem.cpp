@@ -80,7 +80,7 @@ bool Conn2modem::isUartBusy() const
 //-------------------------------------------------------------------------------------
 int Conn2modem::getMaxDataFromModem()
 {
-    return (maxDataFromModem < 1 || (maxDataFromModem > 5000)) ? MAX_READ_FROM_UART : maxDataFromModem;
+    return (maxDataFromModem < 1 || (maxDataFromModem > 50000001)) ? MAX_READ_FROM_UART : maxDataFromModem;
 }
 //-------------------------------------------------------------------------------------
 void Conn2modem::setMaxDataFromModem(const int &bytes)

@@ -24,7 +24,7 @@
 #}
 
 INCLUDEPATH  += $$PWD\
-                $$PWD/../../defines/defines
+                $$PWD/../../defines/defines\
                 $$PWD/../../defines/define-types
 #isEmpty(ENABLE_EXTSUPPORT_OF_IFACES){
 #message(ENABLE_EXTSUPPORT_OF_IFACES is disabled)
