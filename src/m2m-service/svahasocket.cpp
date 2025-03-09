@@ -287,7 +287,11 @@ void SvahaSocket::decodeReadData(const QVariant &dataVar, const quint16 &command
 
         QVariantHash h = dataVar.toHash();
 
-        if(!(h.value("d").toInt() == DEV_POLL || h.value("d").toInt() == DEV_GATE || h.value("d").toInt() == DEV_POLL_EMULATOR_L1 || h.value("d").toInt() == DEV_POLL_EMULATOR_L2 || h.value("d").toInt() == DEV_POLL_EMULATOR_L3)){
+        if(!(h.value("d").toInt() == DEV_POLL || h.value("d").toInt() == DEV_GATE ||
+             h.value("d").toInt() == DEV_POLL_EMULATOR_L1 || h.value("d").toInt() == DEV_POLL_EMULATOR_L2 ||
+             h.value("d").toInt() == DEV_POLL_EMULATOR_L3) ||
+                //since protocol v13
+                h.value("d").toInt() == DEV_M2M_STAFF_SRVS || h.value("d").toInt() == DEV_GATE_V2){
             emit add2systemLog( sessionId, tr("Unknown device type: %1").arg(h.value("d").toInt()));
             onDisconn();
             return;
