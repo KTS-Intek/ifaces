@@ -24,8 +24,9 @@
 #}
 
 INCLUDEPATH  += $$PWD\
-                $$PWD/../../defines/defines\
-                $$PWD/../../defines/define-types
+#                $$PWD/../../defines/defines\
+#                $$PWD/../../defines/define-types
+                $$PWD/src/m2m-service/defines
 #isEmpty(ENABLE_EXTSUPPORT_OF_IFACES){
 #message(ENABLE_EXTSUPPORT_OF_IFACES is disabled)
 
@@ -41,10 +42,41 @@ INCLUDEPATH  += $$PWD\
 #HEADERS += snif-android-src/qtandroidftdi.h
 #DEFINES += ADDANDROIDFTDIUART=1
 #}
+
+linux-beagleboard-g++:{
+   QT -= gui
+}
+
+
 contains( QT, network) {
     DEFINES += HASNETWORKQTLIB
     contains(DEFINES, ENABLE_EXTSUPPORT_OF_IFACES):!contains(DEFINES, DISABLE_M2M_MODULE){
-        include(../m2m-connector/m2m-connector.pri)
+#        include(../m2m-connector/m2m-connector.pri)
+
+HEADERS += \
+    $$PWD/src/m2m-service/defines/m2mconnectionbasetypes.h \
+    $$PWD/src/m2m-service/defines/m2mconnectiondefines.h \
+#    $$PWD/src/m2m-service/m2mconnector.h \
+#    $$PWD/src/m2m-service/m2mconnectorbase.h \
+    $$PWD/src/m2m-service/defines/m2mtcpsockettypes.h \
+    $$PWD/src/m2m-service/svahaserviceconnector.h \
+    $$PWD/src/m2m-service/svahasocket.h \
+    $$PWD/src/m2m-service/matildamessages.h
+# \
+#    $$PWD/src/m2m-service/m2mtcpsocket.h \
+#    $$PWD/src/m2m-service/m2mtcpsocketbase.h
+
+SOURCES += \
+#    $$PWD/src/m2m-service/m2mconnector.cpp \
+#    $$PWD/src/m2m-service/m2mconnectorbase.cpp \
+    $$PWD/src/m2m-service/svahaserviceconnector.cpp \
+    $$PWD/src/m2m-service/svahasocket.cpp \
+    $$PWD/src/m2m-service/matildamessages.cpp
+# \
+#     $$PWD/src/m2m-service/m2mtcpsocket.cpp \
+#    $$PWD/src/m2m-service/m2mtcpsocketbase.cpp
+
+
         message($$TARGET ", ifaces: m2m-connector is enabled")
     }else{
 
