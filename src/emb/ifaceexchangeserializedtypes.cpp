@@ -8,6 +8,8 @@
 
 void IfaceExchangeSerializedTypes::makeRegistration()
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+
     //call this function once, before using these types
     if(!QMetaType::isRegistered(QMetaType::type("ZbyrConnSett"))){
         qRegisterMetaTypeStreamOperators<ZbyrConnSett>("ZbyrConnSett");
@@ -20,6 +22,7 @@ void IfaceExchangeSerializedTypes::makeRegistration()
         qRegisterMetaType<QHash<QString,QString> >("QHash<QString,QString>");
 
     }
+#endif
 }
 
 ZbyrConnSett IfaceExchangeSerializedTypes::getZbyrConnSettFromArgs(const QStringList &list, const bool &verboseMode, bool &ok)

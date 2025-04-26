@@ -34,7 +34,7 @@ void CheckCurrPort::run()
     if(true){
         QFileInfo fi(currPort);
         if(fi.exists())
-            dt = fi.created();
+            dt = fi.birthTime();
     }
 
 
@@ -49,6 +49,7 @@ void CheckCurrPort::run()
 
             if(info.portName() == currPort){
                 found = true;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 
 
                 if(!info.isBusy()){
@@ -64,6 +65,7 @@ void CheckCurrPort::run()
                         emit terminateNow();
                     }
                 }
+#endif
                 break;
             }
        }
@@ -71,16 +73,16 @@ void CheckCurrPort::run()
             sendMessageWithAtimeStamp(tr("!found %1").arg(currPort));
 
             QFileInfo fi(currPort);
-            if(fi.exists() && (!dt.isValid() || (fi.created() == dt && dt.isValid())))
+            if(fi.exists() && (!dt.isValid() || (fi.birthTime() == dt && dt.isValid())))
                 continue;
 
-            sendMessageWithAtimeStamp(tr("!found %1, fi.exists='%2', created='%3'").arg(currPort).arg(int(fi.exists())).arg( fi.created().toString("hh:mm:ss")));
+            sendMessageWithAtimeStamp(tr("!found %1, fi.exists='%2', created='%3'").arg(currPort).arg(int(fi.exists())).arg( fi.birthTime().toString("hh:mm:ss")));
 
              emit portDisconnected(true);
             counter++;
             if(counter > 2){
                 counter = 2;
-                sendMessageWithAtimeStamp(tr("!found %1, fi.exists='%2', created='%3', terminateNow").arg(currPort).arg(int(fi.exists())).arg( fi.created().toString("hh:mm:ss")));
+                sendMessageWithAtimeStamp(tr("!found %1, fi.exists='%2', created='%3', terminateNow").arg(currPort).arg(int(fi.exists())).arg( fi.birthTime().toString("hh:mm:ss")));
 
                 emit terminateNow();
             }
